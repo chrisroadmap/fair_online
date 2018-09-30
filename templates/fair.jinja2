@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <form method="post" action="{{ url_for('fair') }}">
+            {{ form.hidden_tag() }}
+
+            {{ form.ecs.label }} {{ form.ecs() }}
+            {% if form.ecs.errors %}
+                Error: {{ ', '.join(form.ecs.errors) }}
+            {% endif %}
+
+            <input type="submit" value="Calculate"/>
+        </form>
+        {% if result %}
+            Result is: {{ result }}
+        {% endif %}
+    </body>
+</html>
