@@ -9,6 +9,12 @@
                 Error: {{ ', '.join(form.ecs.errors) }}
             {% endif %}
 
+            <br>
+            {{ form.tcr.label }} {{ form.tcr() }}
+            {% if form.tcr.errors %}
+                Error: {{ ', '.join(form.tcr.errors) }}
+            {% endif %}
+
             <input type="submit" value="Calculate"/>
         </form>
         {% if result %}
