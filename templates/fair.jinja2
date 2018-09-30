@@ -4,6 +4,9 @@
         <form method="post" action="{{ url_for('fair') }}">
             {{ form.hidden_tag() }}
 
+            {{ form.useMultigas.label }} {{ form.useMultigas() }}
+            <br>
+
             {{ form.rcp.label }} {{ form.rcp() }}
             <br>
 
