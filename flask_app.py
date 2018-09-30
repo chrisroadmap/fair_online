@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from flask_wtf import Form
-from wtforms import FloatField
-from wtforms.validators import NumberRange, ValidationError
+from wtforms import FloatField, SelectField
+from wtforms.validators import NumberRange, ValidationError, InputRequired
 from fair.forward import fair_scm
 #from fair.rcps import rcp26, rcp45, rcp60, rcp85
 import numpy as np
@@ -21,8 +21,13 @@ def fair():
             raise ValidationError('ECS must be greater than or equal to TCR')
             
     class FairForm(Form):
-        ecs = FloatField("ECS", validators=[NumberRange(min=0.5,max=15)])
-        tcr = FloatField("TCR", validators=[NumberRange(min=0.5,max=10),validate_ecstcr])
+        rcp = SelectField("Emissions scenario", choices=[
+           ('rcp26', 'RCP 2.6'), 
+           ('rcp45', 'RCP 4.5'),
+           ('rcp60', 'RCP 6.0'),
+           ('rcp85', 'RCP 8.5')])
+        ecs = FloatField("ECS", validators=[NumberRange(min=0.5,max=15),InputRequired()])
+        tcr = FloatField("TCR", validators=[NumberRange(min=0.5,max=10),InputRequired(),validate_ecstcr])
         # check tcr <= ecs
     
     form = FairForm()

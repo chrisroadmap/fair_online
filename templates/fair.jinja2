@@ -4,18 +4,21 @@
         <form method="post" action="{{ url_for('fair') }}">
             {{ form.hidden_tag() }}
 
+            {{ form.rcp.label }} {{ form.rcp() }}
+            <br>
+
             {{ form.ecs.label }} {{ form.ecs() }}
             {% if form.ecs.errors %}
                 Error: {{ ', '.join(form.ecs.errors) }}
             {% endif %}
-
             <br>
+
             {{ form.tcr.label }} {{ form.tcr() }}
             {% if form.tcr.errors %}
                 Error: {{ ', '.join(form.tcr.errors) }}
             {% endif %}
-
             <br>
+
             <input type="submit" value="Calculate"/>
         </form>
         {% if result %}
