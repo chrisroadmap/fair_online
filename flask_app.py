@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from flask_wtf import Form
 from wtforms import FloatField
-from wtforms.validators import NoneOf, NumberRange
+from wtforms.validators import NoneOf, NumberRange, ValidationError
 from fair.forward import fair_scm
 #from fair.rcps import rcp26, rcp45, rcp60, rcp85
 import numpy as np
@@ -30,9 +30,14 @@ def divide():
 
 @app.route('/fair', methods=['GET', 'POST'])
 def fair():
+    
+    def validate_ecstcr(form, field):
+        if form.tcr.data > form.ecs.data:
+            raise ValidationError('ECS must be greater than or equal to TCR')
+            
     class FairForm(Form):
         ecs = FloatField("ECS", validators=[NumberRange(min=0.5,max=15)])
-        tcr = FloatField("TCR", validators=[NumberRange(min=0.5,max=10)])
+        tcr = FloatField("TCR", validators=[NumberRange(min=0.5,max=10),validate_ecstcr])
         # check tcr <= ecs
     
     form = FairForm()
