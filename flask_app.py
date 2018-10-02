@@ -8,7 +8,7 @@ from fair.ancil import natural, cmip6_volcanic, cmip6_solar
 import numpy as np
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'crum47cmcf8zw-00kmxb'
+app.config.from_envvar('APPLICATION_SETTINGS')
 
 @app.route('/')
 def index():
