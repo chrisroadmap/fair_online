@@ -30,14 +30,26 @@ def fair():
            ('rcp45', 'RCP 4.5'),
            ('rcp60', 'RCP 6.0'),
            ('rcp85', 'RCP 8.5')])
-        ecs = FloatField("ECS",
-            validators=[NumberRange(min=0.5,max=15),InputRequired(),
+        ecs = FloatField(
+            "ECS",
+            validators=[
+                NumberRange(min=0.5,max=15),
+                InputRequired(),
                 validate_ecstcr],
             default=3.0)
-        tcr = FloatField("TCR",
-            validators=[NumberRange(min=0.5,max=10),InputRequired(),
+        tcr = FloatField(
+            "TCR",
+            validators=[
+                NumberRange(min=0.5,max=10),
+                InputRequired(),
                 validate_ecstcr],
             default=1.75)
+        sf_co2 = FloatField(
+            "CO2",
+            validators=[
+                NumberRange(min=0.0,max=3.0),
+                InputRequired()],
+            default=1.0)
 
     form = FairForm()
     result = None
@@ -57,16 +69,22 @@ def fair():
         if form.useMultigas.data:
             emissions = all_emissions_switch[form.rcp.data][:336,:]
             nat   = natural.Emissions.emissions[:336,:]
+            scale = np.ones(13)
+            scale[0] = form.sf_co2.data
         else:
             emissions = co2_emissions_switch[form.rcp.data][:336]
             nat   = None
+            scale = np.ones(336) * form.sf_co2.data
+                # a temporary fix until 1.3.5 is released
         tcrecs = np.array([form.tcr.data, form.ecs.data])
-        _,_,T = fair_scm(emissions=emissions,
-                         useMultigas=form.useMultigas.data,
-                         tcrecs=tcrecs,
-                         natural=nat,
-                         F_volcanic=cmip6_volcanic.Forcing.volcanic[:336],
-                         F_solar=cmip6_solar.Forcing.solar[:336])
+        _,_,T = fair_scm(
+            emissions=emissions,
+            useMultigas=form.useMultigas.data,
+            tcrecs=tcrecs,
+            natural=nat,
+            F_volcanic=cmip6_volcanic.Forcing.volcanic[:336],
+            F_solar=cmip6_solar.Forcing.solar[:336],
+            scale=scale)
         result = T[-1]
     return render_template('fair.jinja2', result=result, form=form)
 
