@@ -50,6 +50,18 @@ def fair():
                 NumberRange(min=0.0,max=3.0),
                 InputRequired()],
             default=1.0)
+        sf_ch4 = FloatField(
+            "CH4",
+            validators=[
+                NumberRange(min=0.0,max=3.0),
+                InputRequired()],
+            default=1.0)
+        sf_n2o = FloatField(
+            "N2O",
+            validators=[
+                NumberRange(min=0.0,max=3.0),
+                InputRequired()],
+            default=1.0)
 
     form = FairForm()
     result = None
@@ -71,6 +83,8 @@ def fair():
             nat   = natural.Emissions.emissions[:336,:]
             scale = np.ones(13)
             scale[0] = form.sf_co2.data
+            scale[1] = form.sf_ch4.data
+            scale[2] = form.sf_n2o.data
         else:
             emissions = co2_emissions_switch[form.rcp.data][:336]
             nat   = None

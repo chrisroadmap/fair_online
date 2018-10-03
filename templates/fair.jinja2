@@ -22,10 +22,26 @@
             {% endif %}
             <br>
 
+
+
+<!--            {% if not form.useMultigas.data %}
+                multigas off
+            {% endif %} -->
+
             Scale factors:<br>
             {{ form.sf_co2.label }} {{ form.sf_co2() }}
             {% if form.sf_co2.errors %}
                 Error: {{ ', '.join(form.sf_co2.errors) }}
+            {% endif %}
+            <br>
+            {{ form.sf_ch4.label }} {{ form.sf_ch4() }}
+            {% if form.sf_ch4.errors %}
+                Error: {{ ', '.join(form.sf_ch4.errors) }}
+            {% endif %}
+            <br>
+            {{ form.sf_n2o.label }} {{ form.sf_n2o() }}
+            {% if form.sf_n2o.errors %}
+                Error: {{ ', '.join(form.sf_n2o.errors) }}
             {% endif %}
             <br>
 
