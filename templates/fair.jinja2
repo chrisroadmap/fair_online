@@ -4,7 +4,7 @@
         <form method="post" action="{{ url_for('fair') }}">
             {{ form.hidden_tag() }}
 
-            {{ form.useMultigas.label }} {{ form.useMultigas() }}
+            {{ form.useMultigas.label }} {{ form.useMultigas(onchange="toggleEnsembleDisabled(this.checked)") }}
             <br>
 
             {{ form.rcp.label }} {{ form.rcp() }}
@@ -21,12 +21,11 @@
                 Error: {{ ', '.join(form.tcr.errors) }}
             {% endif %}
             <br>
-
-
-
-<!--            {% if not form.useMultigas.data %}
-                multigas off
-            {% endif %} -->
+            {{ form.r0.label }} {{ form.r0() }}
+            {% if form.r0.errors %}
+                Error: {{ ', '.join(form.r0.errors) }}
+            {% endif %}
+            <br>
 
             Scale factors:<br>
             {{ form.sf_co2.label }} {{ form.sf_co2() }}
@@ -34,12 +33,20 @@
                 Error: {{ ', '.join(form.sf_co2.errors) }}
             {% endif %}
             <br>
-            {{ form.sf_ch4.label }} {{ form.sf_ch4() }}
+            {% if form.useMultigas.data == false %}
+                {{ form.sf_ch4.label }} {{ form.sf_ch4(disabled=True) }}
+            {% else %}
+                {{ form.sf_ch4.label }} {{ form.sf_ch4() }}
+            {% endif %}
             {% if form.sf_ch4.errors %}
                 Error: {{ ', '.join(form.sf_ch4.errors) }}
             {% endif %}
             <br>
-            {{ form.sf_n2o.label }} {{ form.sf_n2o() }}
+            {% if form.useMultigas.data == false %}
+                {{ form.sf_n2o.label }} {{ form.sf_n2o(disabled=True, value=form.sf_n2o.data) }}
+            {% else %}
+                {{ form.sf_n2o.label }} {{ form.sf_n2o(value=form.sf_n2o.data) }}
+            {% endif %}
             {% if form.sf_n2o.errors %}
                 Error: {{ ', '.join(form.sf_n2o.errors) }}
             {% endif %}
@@ -51,4 +58,11 @@
             Result is: {{ result }}
         {% endif %}
     </body>
+
+    <script>
+    function toggleEnsembleDisabled(_checked) {
+        document.getElementById('sf_ch4').disabled = !_checked;
+        document.getElementById('sf_n2o').disabled = !_checked;
+    }
+    </script>
 </html>

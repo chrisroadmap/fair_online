@@ -23,6 +23,10 @@ def fair():
                 raise ValidationError(
                     'ECS must be greater than or equal to TCR')
 
+    def validate_nonco2(form, field):
+        if form.useMultigas.data and field.data==None:
+            raise ValidationError('Field is required')
+
     class FairForm(Form):
         useMultigas = BooleanField("Multi-forcing run", default=True)
         rcp = SelectField("Emissions scenario", choices=[
@@ -44,6 +48,12 @@ def fair():
                 InputRequired(),
                 validate_ecstcr],
             default=1.75)
+        r0 = FloatField(
+            "r0",
+            validators=[
+                NumberRange(min=0.0,max=100),
+                InputRequired()],
+            default=35)
         sf_co2 = FloatField(
             "CO2",
             validators=[
@@ -54,13 +64,13 @@ def fair():
             "CH4",
             validators=[
                 NumberRange(min=0.0,max=3.0),
-                InputRequired()],
+                validate_nonco2],
             default=1.0)
         sf_n2o = FloatField(
             "N2O",
             validators=[
                 NumberRange(min=0.0,max=3.0),
-                InputRequired()],
+                validate_nonco2],
             default=1.0)
 
     form = FairForm()
@@ -98,7 +108,8 @@ def fair():
             natural=nat,
             F_volcanic=cmip6_volcanic.Forcing.volcanic[:336],
             F_solar=cmip6_solar.Forcing.solar[:336],
-            scale=scale)
+            scale=scale,
+            r0=form.r0.data)
         result = T[-1]
     return render_template('fair.jinja2', result=result, form=form)
 
