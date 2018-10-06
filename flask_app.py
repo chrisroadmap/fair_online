@@ -51,27 +51,99 @@ def fair():
         r0 = FloatField(
             "r0",
             validators=[
-                NumberRange(min=0.0,max=100),
+                NumberRange(min=0,max=100),
                 InputRequired()],
             default=35)
+        rc = FloatField(
+            "rC",
+            validators=[
+                NumberRange(min=0.000,max=0.100),
+                InputRequired()],
+            default=0.019)
+        rt = FloatField(
+            "rT",
+            validators=[
+                NumberRange(min=0.000,max=20.000),
+                InputRequired()],
+            default=4.165)
         sf_co2 = FloatField(
             "CO2",
             validators=[
-                NumberRange(min=0.0,max=3.0),
+                NumberRange(min=0,max=3),
                 InputRequired()],
-            default=1.0)
+            default=1)
         sf_ch4 = FloatField(
             "CH4",
             validators=[
-                NumberRange(min=0.0,max=3.0),
+                NumberRange(min=0,max=3),
                 validate_nonco2],
-            default=1.0)
+            default=1)
         sf_n2o = FloatField(
             "N2O",
             validators=[
-                NumberRange(min=0.0,max=3.0),
+                NumberRange(min=0,max=3),
                 validate_nonco2],
-            default=1.0)
+            default=1)
+        sf_other = FloatField(
+            "Other GHG",
+            validators=[
+                NumberRange(min=0,max=3),
+                validate_nonco2],
+            default=1)
+        sf_tro3 = FloatField(
+            "Tropospheric O3",
+            validators=[
+                NumberRange(min=-1,max=4),
+                validate_nonco2],
+            default=1)
+        sf_sto3 = FloatField(
+            "Stratospheric O3",
+            validators=[
+                NumberRange(min=-2,max=5),
+                validate_nonco2],
+            default=1)
+        sf_sth2o = FloatField(
+            "Stratospheric H2O from methane oxidation",
+            validators=[
+                NumberRange(min=-2,max=5),
+                validate_nonco2],
+            default=1)
+        sf_con = FloatField(
+            "Contrails",
+            validators=[
+                NumberRange(min=-2,max=5),
+                validate_nonco2],
+            default=1)
+        sf_aer = FloatField(
+            "Aerosols",
+            validators=[
+                NumberRange(min=-2,max=5),
+                validate_nonco2],
+            default=1)
+        sf_bcsnow = FloatField(
+            "Black carbon on snow",
+            validators=[
+                NumberRange(min=0,max=5),
+                validate_nonco2],
+            default=1)
+        sf_landuse = FloatField(
+            "Land use",
+            validators=[
+                NumberRange(min=-2,max=5),
+                validate_nonco2],
+            default=1)
+        sf_vol = FloatField(
+            "Volcanic",
+            validators=[
+                NumberRange(min=0,max=5),
+                validate_nonco2],
+            default=1)
+        sf_sol = FloatField(
+            "Solar",
+            validators=[
+                NumberRange(min=0,max=10),
+                validate_nonco2],
+            default=1)
 
     form = FairForm()
     result = None
@@ -95,6 +167,16 @@ def fair():
             scale[0] = form.sf_co2.data
             scale[1] = form.sf_ch4.data
             scale[2] = form.sf_n2o.data
+            scale[3] = form.sf_other.data
+            scale[4] = form.sf_tro3.data
+            scale[5] = form.sf_sto3.data
+            scale[6] = form.sf_sth2o.data
+            scale[7] = form.sf_con.data
+            scale[8] = form.sf_aer.data
+            scale[9] = form.sf_bcsnow.data
+            scale[10] = form.sf_landuse.data
+            scale[11] = form.sf_vol.data
+            scale[12] = form.sf_sol.data
         else:
             emissions = co2_emissions_switch[form.rcp.data][:336]
             nat   = None
@@ -109,7 +191,9 @@ def fair():
             F_volcanic=cmip6_volcanic.Forcing.volcanic[:336],
             F_solar=cmip6_solar.Forcing.solar[:336],
             scale=scale,
-            r0=form.r0.data)
+            r0=form.r0.data,
+            rc=form.rc.data,
+            rt=form.rt.data)
         result = T[-1]
     return render_template('fair.jinja2', result=result, form=form)
 
