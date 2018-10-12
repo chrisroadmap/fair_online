@@ -1,11 +1,16 @@
-from flask import Flask, render_template
-from flask_wtf import Form
-from wtforms import FloatField, SelectField, BooleanField
-from wtforms.validators import NumberRange, ValidationError, InputRequired
+from base64 import b64encode
 from fair.forward import fair_scm
 from fair.RCPs import rcp26, rcp45, rcp60, rcp85
 from fair.ancil import natural, cmip6_volcanic, cmip6_solar
+from flask import Flask, render_template, make_response
+from flask_wtf import Form
+from io import BytesIO
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+from wtforms import FloatField, SelectField, BooleanField
+from wtforms.validators import NumberRange, ValidationError, InputRequired
 import numpy as np
+
 
 app = Flask(__name__)
 app.config.from_envvar('APPLICATION_SETTINGS')
@@ -147,6 +152,7 @@ def fair():
 
     form = FairForm()
     result = None
+    #T = np.array([0])
 
     if form.validate_on_submit():
         # must be more pythonic way
@@ -195,7 +201,36 @@ def fair():
             rc=form.rc.data,
             rt=form.rt.data)
         result = T[-1]
-    return render_template('fair.jinja2', result=result, form=form)
+    if result:
+        return render_template(
+            'fair.jinja2',
+            result=result,
+            form=form,
+            output=b64encode(plot_temp(T)).decode())
+    else:
+        return render_template(
+            'fair.jinja2',
+            result=result,
+            form=form)
+
+
+@app.route('/plot_temp')
+def plot_temp(T, years=np.arange(1765,2101)):
+#def plot_temp():
+    fig  = Figure()
+    ax   = fig.add_subplot(1, 1, 1)
+    ax.plot(years, T)
+    ax.set_xlim(1765,2100)
+    ax.set_ylabel('Temperature anomaly since pre-industrial, $^{\circ}$C')
+    ax.set_xlabel('Year')
+    ax.grid()
+#    ax.plot(np.arange(10), np.arange(10)**2)
+    canvas = FigureCanvas(fig)
+    output = BytesIO()
+    canvas.print_png(output)
+    response = output.getvalue()
+    return response
+
 
 if __name__ == '__main__':
     app.debug = True
