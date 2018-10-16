@@ -1,8 +1,9 @@
 from base64 import b64encode
+from fair import __version__
 from fair.forward import fair_scm
 from fair.RCPs import rcp26, rcp45, rcp60, rcp85
 from fair.ancil import natural, cmip6_volcanic, cmip6_solar
-from flask import Flask, render_template, make_response
+from flask import Flask, render_template
 from flask_wtf import Form
 from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -15,11 +16,8 @@ import numpy as np
 app = Flask(__name__)
 app.config.from_envvar('APPLICATION_SETTINGS')
 
-@app.route('/')
-def index():
-    return render_template('index.jinja2')
 
-@app.route('/fair', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def fair():
 
     def validate_ecstcr(form, field):
@@ -203,15 +201,17 @@ def fair():
         result = T[-1]
     if result:
         return render_template(
-            'fair.jinja2',
+            'fair.html',
             result=result,
             form=form,
-            output=b64encode(plot_temp(T)).decode())
+            output=b64encode(plot_temp(T)).decode(),
+            version=__version__)
     else:
         return render_template(
-            'fair.jinja2',
+            'fair.html',
             result=result,
-            form=form)
+            form=form,
+            version=__version__)
 
 
 @app.route('/plot_temp')
