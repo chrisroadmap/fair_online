@@ -12,315 +12,347 @@
         <div class="container">
             <h1>FAIR Simple Climate Model</h1>
 
-<div class="row">
-<div class="col-sm-4">
+            <div class="row">
+                <div class="col-sm-4">
 
-            <form class="form-horizontal" method="post" action="{{ url_for('fair') }}">
-                {{ form.hidden_tag() }}
+                    <form class="form-horizontal" method="post" action="{{ url_for('fair') }}">
+                        {{ form.hidden_tag() }}
 
-                <div class="form-group">
-                    {{ form.useMultigas.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.useMultigas(onchange="toggleEnsembleDisabled(this.checked)") }}
+                        <div class="form-group">
+                            {{ form.useMultigas.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.useMultigas(onchange="toggleEnsembleDisabled(this.checked)") }}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.rcp.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.rcp() }}
+                            </div>
+                        </div>
+
+                        <h2>Climate response</h2>
+
+                        <div class="form-group">
+                            {{ form.ecs.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.ecs() }}
+                            </div>
+                            {% if form.ecs.errors %}
+                                Error: {{ ', '.join(form.ecs.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.tcr.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.tcr() }}
+                            </div>
+                            {% if form.tcr.errors %}
+                                Error: {{ ', '.join(form.tcr.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.f2x.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.f2x() }}
+                            </div>
+                            {% if form.f2x.errors %}
+                                Error: {{ ', '.join(form.f2x.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.d1.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.d1() }}
+                            </div>
+                            {% if form.d1.errors %}
+                                Error: {{ ', '.join(form.d1.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.d2.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.d2() }}
+                            </div>
+                            {% if form.d2.errors %}
+                                Error: {{ ', '.join(form.d2.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <h2>Carbon cycle</h2>
+
+                        <div class="form-group">
+                            {{ form.r0.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.r0() }}
+                            </div>
+                            {% if form.r0.errors %}
+                                Error: {{ ', '.join(form.r0.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.rc.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.rc() }}
+                            </div>
+                            {% if form.rc.errors %}
+                                Error: {{ ', '.join(form.rc.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.rt.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.rt() }}
+                            </div>
+                            {% if form.rt.errors %}
+                                Error: {{ ', '.join(form.rt.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <h2>Forcing scale factors</h2>
+
+                        <div class="form-group">
+                            {{ form.sf_co2.label(class_="control-label col-sm-6") }}
+                            <div class="col-sm-6">
+                                {{ form.sf_co2() }}
+                            </div>
+                            {% if form.sf_co2.errors %}
+                                Error: {{ ', '.join(form.sf_co2.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_ch4.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_ch4(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_ch4.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_ch4() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_ch4.errors %}
+                                Error: {{ ', '.join(form.sf_ch4.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_n2o.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_n2o(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_n2o.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_n2o() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_n2o.errors %}
+                                Error: {{ ', '.join(form.sf_n2o.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_other.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_other(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_other.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_other() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_other.errors %}
+                                Error: {{ ', '.join(form.sf_other.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_tro3.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_tro3(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_tro3.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_tro3() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_tro3.errors %}
+                                Error: {{ ', '.join(form.sf_tro3.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_sto3.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sto3(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_sto3.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sto3() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_sto3.errors %}
+                                Error: {{ ', '.join(form.sf_sto3.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_sth2o.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sth2o(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_sth2o.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sth2o() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_sth2o.errors %}
+                                Error: {{ ', '.join(form.sf_sth2o.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_con.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_con(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_con.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_con() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_con.errors %}
+                                Error: {{ ', '.join(form.sf_con.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_aer.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_aer(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_aer.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_aer() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_aer.errors %}
+                                Error: {{ ', '.join(form.sf_aer.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_bcsnow.label(class_="control-label col-sm-6")}}
+                                <div class="col-sm-6">
+                                    {{ form.sf_bcsnow(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_bcsnow.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_bcsnow() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_bcsnow.errors %}
+                                Error: {{ ', '.join(form.sf_bcsnow.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_landuse.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_landuse(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_landuse.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_landuse() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_landuse.errors %}
+                                Error: {{ ', '.join(form.sf_landuse.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_vol.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_vol(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_vol.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_vol() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_vol.errors %}
+                                Error: {{ ', '.join(form.sf_vol.errors) }}
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {% if form.useMultigas.data == false %}
+                                {{ form.sf_sol.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sol(disabled=True) }}
+                                </div>
+                            {% else %}
+                                {{ form.sf_sol.label(class_="control-label col-sm-6") }}
+                                <div class="col-sm-6">
+                                    {{ form.sf_sol() }}
+                                </div>
+                            {% endif %}
+                            {% if form.sf_sol.errors %}
+                                Error: {{ ', '.join(form.sf_sol.errors) }}
+                            {% endif %}
+                        </div>
+
                     </div>
-                </div>
 
-                <div class="form-group">
-                    {{ form.rcp.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.rcp() }}
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <input type="submit" value="Calculate" class_="control-label col-sm-6"/>
+                        </div>
+                </form>
+
+                        {% if result %}
+                            <img src="data:image/png;base64,{{ output }}"  class="img-responsive" />
+                        {% endif %}
                     </div>
-                </div>
 
-                <h2>Climate response</h2>
-
-                <div class="form-group">
-                    {{ form.ecs.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.ecs() }}
-                    </div>
-                    {% if form.ecs.errors %}
-                        Error: {{ ', '.join(form.ecs.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {{ form.tcr.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.tcr() }}
-                    </div>
-                    {% if form.tcr.errors %}
-                        Error: {{ ', '.join(form.tcr.errors) }}
-                    {% endif %}
-                </div>
-
-                <h2>Carbon cycle</h2>
-
-                <div class="form-group">
-                    {{ form.r0.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.r0() }}
-                    </div>
-                    {% if form.r0.errors %}
-                        Error: {{ ', '.join(form.r0.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {{ form.rc.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.rc() }}
-                    </div>
-                    {% if form.rc.errors %}
-                        Error: {{ ', '.join(form.rc.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {{ form.rt.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.rt() }}
-                    </div>
-                    {% if form.rt.errors %}
-                        Error: {{ ', '.join(form.rt.errors) }}
-                    {% endif %}
-                </div>
-
-                <h2>Forcing scale factors</h2>
-
-                <div class="form-group">
-                    {{ form.sf_co2.label(class_="control-label col-sm-6") }}
-                    <div class="col-sm-6">
-                        {{ form.sf_co2() }}
-                    </div>
-                    {% if form.sf_co2.errors %}
-                        Error: {{ ', '.join(form.sf_co2.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_ch4.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_ch4(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_ch4.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_ch4() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_ch4.errors %}
-                        Error: {{ ', '.join(form.sf_ch4.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_n2o.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_n2o(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_n2o.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_n2o(value=form.sf_n2o.data) }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_n2o.errors %}
-                        Error: {{ ', '.join(form.sf_n2o.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_other.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_other(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_other.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_other() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_other.errors %}
-                        Error: {{ ', '.join(form.sf_other.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_tro3.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_tro3(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_tro3.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_tro3() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_tro3.errors %}
-                        Error: {{ ', '.join(form.sf_tro3.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_sto3.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sto3(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_sto3.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sto3() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_sto3.errors %}
-                        Error: {{ ', '.join(form.sf_sto3.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_sth2o.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sth2o(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_sth2o.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sth2o() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_sth2o.errors %}
-                        Error: {{ ', '.join(form.sf_sth2o.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_con.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_con(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_con.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_con() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_con.errors %}
-                        Error: {{ ', '.join(form.sf_con.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_aer.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_aer(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_aer.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_aer() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_aer.errors %}
-                        Error: {{ ', '.join(form.sf_aer.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_bcsnow.label(class_="control-label col-sm-6")}}
-                        <div class="col-sm-6">
-                            {{ form.sf_bcsnow(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_bcsnow.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_bcsnow() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_bcsnow.errors %}
-                        Error: {{ ', '.join(form.sf_bcsnow.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_landuse.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_landuse(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_landuse.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_landuse() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_landuse.errors %}
-                        Error: {{ ', '.join(form.sf_landuse.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_vol.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_vol(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_vol.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_vol() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_vol.errors %}
-                        Error: {{ ', '.join(form.sf_vol.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {% if form.useMultigas.data == false %}
-                        {{ form.sf_sol.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sol(disabled=True) }}
-                        </div>
-                    {% else %}
-                        {{ form.sf_sol.label(class_="control-label col-sm-6") }}
-                        <div class="col-sm-6">
-                            {{ form.sf_sol() }}
-                        </div>
-                    {% endif %}
-                    {% if form.sf_sol.errors %}
-                        Error: {{ ', '.join(form.sf_sol.errors) }}
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    <div class="col-sm-6"> </div>
-                    <input type="submit" value="Calculate" class_="control-label col-sm-6"/>
-                </div>
-            </form>
-</div>
-<div class="col-sm-8">
-                {% if result %}
-                    <img src="data:image/png;base64,{{ output }}"  class="img-responsive" />
-                {% endif %}
-</div>
-
-</div>
-<div class="row">
-            <div class="col-sm-12">
-                <p>FAIR version {{ version }}</p>
-                <p>Website design by Chris Smith and Layik Hama</p>
             </div>
-</div>
+
+            <div class="row">
+                <div class="col-sm-12">
+                    <p>FAIR version {{ version }}</p>
+                    <p>Website design by Chris Smith and Layik Hama</p>
+                </div>
+            </div>
         </div>
     </body>
 

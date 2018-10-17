@@ -51,38 +51,56 @@ def fair():
                 InputRequired(),
                 validate_ecstcr],
             default=1.75)
+        f2x = FloatField(
+            "F<sub>2&times;</sub>",
+            validators=[
+                NumberRange(min=2,max=5.5),
+                InputRequired()],
+            default=3.71)
+        d1 = FloatField(
+            "d<sub>1</sub>",
+            validators=[
+                NumberRange(min=50,max=600),
+                InputRequired()],
+            default=239)
+        d2 = FloatField(
+            "d<sub>2</sub>",
+            validators=[
+                NumberRange(min=1.0,max=10.0),
+                InputRequired()],
+            default=4.1)
         r0 = FloatField(
-            "r0",
+            "r<sub>0</sub>",
             validators=[
                 NumberRange(min=0,max=100),
                 InputRequired()],
             default=35)
         rc = FloatField(
-            "rC",
+            "r<sub>C</sub>",
             validators=[
                 NumberRange(min=0.000,max=0.100),
                 InputRequired()],
             default=0.019)
         rt = FloatField(
-            "rT",
+            "r<sub>T</sub>",
             validators=[
                 NumberRange(min=0.000,max=20.000),
                 InputRequired()],
             default=4.165)
         sf_co2 = FloatField(
-            "CO2",
+            "CO<sub>2</sub>",
             validators=[
                 NumberRange(min=0,max=3),
                 InputRequired()],
             default=1)
         sf_ch4 = FloatField(
-            "CH4",
+            "CH<sub>4</sub>",
             validators=[
                 NumberRange(min=0,max=3),
                 validate_nonco2],
             default=1)
         sf_n2o = FloatField(
-            "N2O",
+            "N<sub>2</sub>O",
             validators=[
                 NumberRange(min=0,max=3),
                 validate_nonco2],
@@ -94,19 +112,19 @@ def fair():
                 validate_nonco2],
             default=1)
         sf_tro3 = FloatField(
-            "Tropospheric O3",
+            "Tropospheric O<sub>3</sub>",
             validators=[
                 NumberRange(min=-1,max=4),
                 validate_nonco2],
             default=1)
         sf_sto3 = FloatField(
-            "Stratospheric O3",
+            "Stratospheric O<sub>3</sub>",
             validators=[
                 NumberRange(min=-2,max=5),
                 validate_nonco2],
             default=1)
         sf_sth2o = FloatField(
-            "Stratospheric H2O from methane oxidation",
+            "Stratospheric H<sub>2</sub>O from methane oxidation",
             validators=[
                 NumberRange(min=-2,max=5),
                 validate_nonco2],
@@ -197,7 +215,9 @@ def fair():
             scale=scale,
             r0=form.r0.data,
             rc=form.rc.data,
-            rt=form.rt.data)
+            rt=form.rt.data,
+            d=np.array([form.d1.data,form.d2.data]),
+            F2x=form.f2x.data)
         result = T[-1]
     if result:
         return render_template(
