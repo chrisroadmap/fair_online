@@ -1,5 +1,0 @@
-fair
-flask
-python-dotenv
-scipy
-numpy
