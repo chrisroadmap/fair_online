@@ -1,5 +1,5 @@
 from base64 import b64encode
-from fair import __version__
+from fair import __version__ as fair_version
 from fair.forward import fair_scm
 from fair.RCPs import rcp26, rcp45, rcp60, rcp85
 from fair.ancil import natural, cmip6_volcanic, cmip6_solar
@@ -225,13 +225,13 @@ def fair():
             result=result,
             form=form,
             output=b64encode(plot_temp(T)).decode(),
-            version=__version__)
+            fair_version=fair_version)
     else:
         return render_template(
             'fair.html',
             result=result,
             form=form,
-            version=__version__)
+            fair_version=fair_version)
 
 
 @app.route('/plot_temp')
