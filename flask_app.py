@@ -4,7 +4,7 @@ from fair.forward import fair_scm
 from fair.RCPs import rcp26, rcp45, rcp60, rcp85
 from fair.ancil import natural, cmip6_volcanic, cmip6_solar
 from flask import Flask, render_template
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -30,7 +30,7 @@ def fair():
         if form.useMultigas.data and field.data==None:
             raise ValidationError('Field is required')
 
-    class FairForm(Form):
+    class FairForm(FlaskForm):
         useMultigas = BooleanField("Multi-forcing run", default=True)
         rcp = SelectField("Emissions scenario", choices=[
            ('rcp26', 'RCP 2.6'),
@@ -52,55 +52,56 @@ def fair():
                 validate_ecstcr],
             default=1.75)
         f2x = FloatField(
-            "F<sub>2&times;</sub>",
+            r"F\(_{2\times}\)",
+#            "F<sub>2&times;</sub>",
             validators=[
                 NumberRange(min=2,max=5.5),
                 InputRequired()],
             default=3.71)
         d1 = FloatField(
-            "d<sub>1</sub>",
+            "d\(_1\)",
             validators=[
                 NumberRange(min=50,max=600),
                 InputRequired()],
             default=239)
         d2 = FloatField(
-            "d<sub>2</sub>",
+            "d\(_2\)",
             validators=[
                 NumberRange(min=1.0,max=10.0),
                 InputRequired()],
             default=4.1)
         r0 = FloatField(
-            "r<sub>0</sub>",
+            "r\(_0\)",
             validators=[
                 NumberRange(min=0,max=100),
                 InputRequired()],
             default=35)
         rc = FloatField(
-            "r<sub>C</sub>",
+            "r\(_C\)",
             validators=[
                 NumberRange(min=0.000,max=0.100),
                 InputRequired()],
             default=0.019)
         rt = FloatField(
-            "r<sub>T</sub>",
+            "r\(_T\)",
             validators=[
                 NumberRange(min=0.000,max=20.000),
                 InputRequired()],
             default=4.165)
         sf_co2 = FloatField(
-            "CO<sub>2</sub>",
+            "CO\(_2\)",
             validators=[
                 NumberRange(min=0,max=3),
                 InputRequired()],
             default=1)
         sf_ch4 = FloatField(
-            "CH<sub>4</sub>",
+            "CH\(_4\)",
             validators=[
                 NumberRange(min=0,max=3),
                 validate_nonco2],
             default=1)
         sf_n2o = FloatField(
-            "N<sub>2</sub>O",
+            "N\(_2\)O",
             validators=[
                 NumberRange(min=0,max=3),
                 validate_nonco2],
@@ -112,19 +113,19 @@ def fair():
                 validate_nonco2],
             default=1)
         sf_tro3 = FloatField(
-            "Tropospheric O<sub>3</sub>",
+            "Tropospheric O\(_3\)",
             validators=[
                 NumberRange(min=-1,max=4),
                 validate_nonco2],
             default=1)
         sf_sto3 = FloatField(
-            "Stratospheric O<sub>3</sub>",
+            "Stratospheric O\(_3\)",
             validators=[
                 NumberRange(min=-2,max=5),
                 validate_nonco2],
             default=1)
         sf_sth2o = FloatField(
-            "Stratospheric H<sub>2</sub>O from methane oxidation",
+            "Stratospheric H\(_2\)O from methane oxidation",
             validators=[
                 NumberRange(min=-2,max=5),
                 validate_nonco2],
