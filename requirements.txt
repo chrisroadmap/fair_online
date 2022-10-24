@@ -1,5 +1,7 @@
-fair
+fair==1.6.4
 flask
+flask-wtf
 python-dotenv
 scipy
 numpy
+matplotlib
