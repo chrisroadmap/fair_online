@@ -1,0 +1,134 @@
+/* plots, inputs and plot containiners: */
+
+.content_model_inputs,
+.content_plots {
+  margin-left: 1em;
+  margin-right: 1em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.content_model_input {
+  margin: 0.3em;
+}
+
+.input_error {
+  display: none;
+  color: #ee3333;
+  padding: 0.5em;
+  margin: 0.5em;
+  max-width: 26em;
+}
+
+.scenarios_input_label,
+.species_input_label {
+  margin-left: 0.35em;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.scenarios_input_label_text,
+.species_input_label_text {
+  color: #ffffff;
+  background-color: #aaaaaa;
+  border-radius: 0.3em;
+  font-size: 1.2em;
+  padding: 0.5em;
+  padding-top: 0.5em;
+  max-height: 2.2em;
+  cursor: pointer;
+}
+
+.scenarios_input_checkbox,
+.species_input_checkbox {
+  display: none;
+}
+
+.scenarios_input_checkbox:checked+.scenarios_input_label_text,
+.species_input_checkbox:checked+.species_input_label_text {
+  background-color: #5a8d03;
+}
+
+#run_model {
+  margin-top: 1.5em;
+}
+
+.run_button {
+  font-size: 1.1em;
+  color: #eeeeee;
+  background-color: #5a8d03;
+  border: 1px solid #5a8d03;
+  border-radius: 0.3em;
+  padding: 0.5em;
+  margin: 0.5em;
+  cursor: pointer;
+  max-height: 2.3em;
+}
+
+.run_button:focus,
+.run_button:active,
+.run_button:hover {
+  background-color: #6a9d13;
+  border: 1px solid #6a9d13;
+}
+
+.run_button:disabled, .run_button[disabled] {
+  color: #999999;
+  background-color: #e9e9e9;
+  border: 1px solid #e9e9e9;
+  cursor: auto;
+}
+
+.content_model_spinner {
+  display: none;
+  height: 2.0em;
+  padding: 0.3em;
+  margin: 0.5em;
+  margin-left: 2.5em;
+}
+
+.content_plots {
+  max-height: 5%;
+}
+
+.content_plot_box {
+  height: 0;
+  overflow: hidden;
+  padding-top: 45%;
+  position: relative;
+}
+
+.content_plot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* adjust plots depending on page size: */
+
+@media only screen and (max-width: 750px) {
+  .content_plot_box {
+    -webkit-flex-basis: 51% !important;
+    -moz-flex-basis: 51% !important;
+    -ms-flex-basis: 51% !important;
+    flex-basis: 51% !important;
+    padding-top: 85%;
+  }
+  .content_plot_box_empty {
+    display: none;
+  }
+}
+
+/* csv download links: */
+.content_download_csv {
+  position: absolute;
+  right: 0.75em;
+  bottom: 0.75em;
+  width: 1.5em;
+  height: 1.5em;
+  background-image: url("./img/model/save.png");
+  background-size: contain;
+  cursor: pointer;
+}

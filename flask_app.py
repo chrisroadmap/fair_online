@@ -1,258 +1,330 @@
-from base64 import b64encode
-from fair import __version__ as fair_version
-from fair.forward import fair_scm
-from fair.RCPs import rcp26, rcp45, rcp60, rcp85
-from fair.ancil import natural, cmip6_volcanic, cmip6_solar
-from flask import Flask, render_template
-from flask_wtf import FlaskForm
-from io import BytesIO
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
-from wtforms import FloatField, SelectField, BooleanField
-from wtforms.validators import NumberRange, ValidationError, InputRequired
+# -*- coding: utf-8 -*-
+
+"""
+FaIR web application
+"""
+
+# --- imports
+
+# std lib imports:
+import json
+import os
+
+# third party imports:
+from flask import Flask, render_template, request
+import netCDF4 as nc
 import numpy as np
 
+# local imports:
+from model import run_model
+from constants import SCENARIOS, SPECIES, DEFAULT_SPECIES
 
+# --- global variables
+
+# define flask application:
 app = Flask(__name__)
-app.config.from_envvar('APPLICATION_SETTINGS')
+# define site root:
+SITE_ROOT = os.path.realpath(app.root_path)
+# define data directory:
+DATA_DIR = os.sep.join([SITE_ROOT, 'data'])
+# scenarios which can be selected on model pages:
+SCENARIOS = [{'name': i, 'checked': True} for i in SCENARIOS]
+# species which can be selected on model pages:
+SPECIES = SPECIES
+# default selected specie:
+DEFAULT_SPECIES = DEFAULT_SPECIES
+# pre-calculated data is stored here:
+PRECALC_DATA = {}
+# pre-calculated data directory:
+PRECALC_DIR = os.sep.join([DATA_DIR, 'pre-calc'])
+# pre-calculated data files:
+PRECALC_FILES = {
+    'temperature': {
+        'path': 'ssp_temperature.nc',
+        'units': 'K',
+        'data_key': 'temperature'
+    },
+    'emissions': {
+        'path': 'ssp_emissions.nc',
+        'units': 'Gt',
+        'data_key': 'emissions'
+    },
+    'concentration': {
+        'path': 'ssp_concentration.nc',
+        'units': 'ppt',
+        'data_key': 'concentration'
+    },
+    'forcing': {
+        'path': 'ssp_forcing.nc',
+        'units': 'W/m2',
+        'data_key': 'forcing'
+    },
+    'forcing_sum': {
+        'path': 'ssp_forcing_sum.nc',
+        'units': 'W/m2',
+        'data_key': 'forcing'
+    }
+}
+# years for which pre-calculated data should be read in (greater than /
+# less than):
+PRECALC_START = 1699
+PRECALC_END = 2301
 
+# define path to config and read:
+CONFIG_FILE = os.sep.join([SITE_ROOT, 'config.json'])
+with open(CONFIG_FILE, 'r', encoding='utf-8') as CONFIG_JSON:
+    APP_CONFIG = json.load(CONFIG_JSON)
+# define flask app secret key:
+app.secret_key = APP_CONFIG['secret_key']
 
-@app.route('/', methods=['GET', 'POST'])
-def fair():
+# ---
 
-    def validate_ecstcr(form, field):
-        if type(form.tcr.data)==float and type(form.ecs.data)==float:
-            if form.tcr.data > form.ecs.data:
-                raise ValidationError(
-                    'ECS must be greater than or equal to TCR')
+# how many decimal places to use for rounding:
+DATA_DP = 3
+# init data types dictionary:
+DATA_TYPES = {}
 
-    def validate_nonco2(form, field):
-        if form.useMultigas.data and field.data==None:
-            raise ValidationError('Field is required')
-
-    class FairForm(FlaskForm):
-        useMultigas = BooleanField("Multi-forcing run", default=True)
-        rcp = SelectField("Emissions scenario", choices=[
-           ('rcp26', 'RCP 2.6'),
-           ('rcp45', 'RCP 4.5'),
-           ('rcp60', 'RCP 6.0'),
-           ('rcp85', 'RCP 8.5')])
-        ecs = FloatField(
-            "ECS",
-            validators=[
-                NumberRange(min=0.5,max=15),
-                InputRequired(),
-                validate_ecstcr],
-            default=3.0)
-        tcr = FloatField(
-            "TCR",
-            validators=[
-                NumberRange(min=0.5,max=10),
-                InputRequired(),
-                validate_ecstcr],
-            default=1.75)
-        f2x = FloatField(
-            r"F\(_{2\times}\)",
-#            "F<sub>2&times;</sub>",
-            validators=[
-                NumberRange(min=2,max=5.5),
-                InputRequired()],
-            default=3.71)
-        d1 = FloatField(
-            "d\(_1\)",
-            validators=[
-                NumberRange(min=50,max=600),
-                InputRequired()],
-            default=239)
-        d2 = FloatField(
-            "d\(_2\)",
-            validators=[
-                NumberRange(min=1.0,max=10.0),
-                InputRequired()],
-            default=4.1)
-        r0 = FloatField(
-            "r\(_0\)",
-            validators=[
-                NumberRange(min=0,max=100),
-                InputRequired()],
-            default=35)
-        rc = FloatField(
-            "r\(_C\)",
-            validators=[
-                NumberRange(min=0.000,max=0.100),
-                InputRequired()],
-            default=0.019)
-        rt = FloatField(
-            "r\(_T\)",
-            validators=[
-                NumberRange(min=0.000,max=20.000),
-                InputRequired()],
-            default=4.165)
-        sf_co2 = FloatField(
-            "CO\(_2\)",
-            validators=[
-                NumberRange(min=0,max=3),
-                InputRequired()],
-            default=1)
-        sf_ch4 = FloatField(
-            "CH\(_4\)",
-            validators=[
-                NumberRange(min=0,max=3),
-                validate_nonco2],
-            default=1)
-        sf_n2o = FloatField(
-            "N\(_2\)O",
-            validators=[
-                NumberRange(min=0,max=3),
-                validate_nonco2],
-            default=1)
-        sf_other = FloatField(
-            "Other GHG",
-            validators=[
-                NumberRange(min=0,max=3),
-                validate_nonco2],
-            default=1)
-        sf_tro3 = FloatField(
-            "Tropospheric O\(_3\)",
-            validators=[
-                NumberRange(min=-1,max=4),
-                validate_nonco2],
-            default=1)
-        sf_sto3 = FloatField(
-            "Stratospheric O\(_3\)",
-            validators=[
-                NumberRange(min=-2,max=5),
-                validate_nonco2],
-            default=1)
-        sf_sth2o = FloatField(
-            "Stratospheric H\(_2\)O from methane oxidation",
-            validators=[
-                NumberRange(min=-2,max=5),
-                validate_nonco2],
-            default=1)
-        sf_con = FloatField(
-            "Contrails",
-            validators=[
-                NumberRange(min=-2,max=5),
-                validate_nonco2],
-            default=1)
-        sf_aer = FloatField(
-            "Aerosols",
-            validators=[
-                NumberRange(min=-2,max=5),
-                validate_nonco2],
-            default=1)
-        sf_bcsnow = FloatField(
-            "Black carbon on snow",
-            validators=[
-                NumberRange(min=0,max=5),
-                validate_nonco2],
-            default=1)
-        sf_landuse = FloatField(
-            "Land use",
-            validators=[
-                NumberRange(min=-2,max=5),
-                validate_nonco2],
-            default=1)
-        sf_vol = FloatField(
-            "Volcanic",
-            validators=[
-                NumberRange(min=0,max=5),
-                validate_nonco2],
-            default=1)
-        sf_sol = FloatField(
-            "Solar",
-            validators=[
-                NumberRange(min=0,max=10),
-                validate_nonco2],
-            default=1)
-
-    form = FairForm()
-    result = None
-    #T = np.array([0])
-
-    if form.validate_on_submit():
-        # must be more pythonic way
-        all_emissions_switch = {
-            'rcp26': rcp26.Emissions.emissions,
-            'rcp45': rcp45.Emissions.emissions,
-            'rcp60': rcp60.Emissions.emissions,
-            'rcp85': rcp85.Emissions.emissions}
-        co2_emissions_switch = {
-            'rcp26': rcp26.Emissions.co2,
-            'rcp45': rcp45.Emissions.co2,
-            'rcp60': rcp60.Emissions.co2,
-            'rcp85': rcp85.Emissions.co2}
-        if form.useMultigas.data:
-            emissions = all_emissions_switch[form.rcp.data][:336,:]
-            nat   = natural.Emissions.emissions[:336,:]
-            scale = np.ones(13)
-            scale[0] = form.sf_co2.data
-            scale[1] = form.sf_ch4.data
-            scale[2] = form.sf_n2o.data
-            scale[3] = form.sf_other.data
-            scale[4] = form.sf_tro3.data
-            scale[5] = form.sf_sto3.data
-            scale[6] = form.sf_sth2o.data
-            scale[7] = form.sf_con.data
-            scale[8] = form.sf_aer.data
-            scale[9] = form.sf_bcsnow.data
-            scale[10] = form.sf_landuse.data
-            scale[11] = form.sf_vol.data
-            scale[12] = form.sf_sol.data
-        else:
-            emissions = co2_emissions_switch[form.rcp.data][:336]
-            nat   = None
-            scale = np.ones(336) * form.sf_co2.data
-                # a temporary fix until 1.3.5 is released
-        tcrecs = np.array([form.tcr.data, form.ecs.data])
-        _,_,T = fair_scm(
-            emissions=emissions,
-            useMultigas=form.useMultigas.data,
-            tcrecs=tcrecs,
-            natural=nat,
-            F_volcanic=cmip6_volcanic.Forcing.volcanic[:336],
-            F_solar=cmip6_solar.Forcing.solar[:336],
-            scale=scale,
-            r0=form.r0.data,
-            rc=form.rc.data,
-            rt=form.rt.data,
-            d=np.array([form.d1.data,form.d2.data]),
-            F2x=form.f2x.data)
-        result = T[-1]
-    if result:
-        return render_template(
-            'fair.html',
-            result=result,
-            form=form,
-            output=b64encode(plot_temp(T)).decode(),
-            fair_version=fair_version)
+# load precalculated data on start up.
+# loop through precalculated files:
+for data_type, precalc_dict in PRECALC_FILES.items():
+    # get data type details:
+    data_path = precalc_dict['path']
+    data_units = precalc_dict['units']
+    data_key = precalc_dict['data_key']
+    # data file path:
+    data_file = os.sep.join([
+        PRECALC_DIR, data_path
+    ])
+    # load the data:
+    data = nc.Dataset(data_file)
+    # get data dimensions:
+    data_dims = data.dimensions.keys()
+    # get data variables:
+    data_vars = data.variables.keys()
+    # get data scenarios:
+    data_scenarios = data['scenario'][:].tolist()
+    data_scenarios_count = len(data_scenarios)
+    # get date dimension, either 'timepoints' or 'timebounds':
+    if 'timebounds' in data_dims:
+        date_key = 'timebounds'
     else:
-        return render_template(
-            'fair.html',
-            result=result,
-            form=form,
-            fair_version=fair_version)
+        date_key = 'timepoints'
+    # get indexes for required dates:
+    date_indexes = np.where(
+        (data[date_key][:] > PRECALC_START) &
+        (data[date_key][:] < PRECALC_END)
+    )
+    # get data dates:
+    data_date = data[date_key][date_indexes].tolist()
+    data_date_count = len(data_date)
+    # check if there is a percentile dimension:
+    has_perc = bool('percentile' in data_dims)
+    # if this data does not have a specie dimension:
+    if not 'specie' in data_dims:
+        # init dict for this data:
+        DATA_TYPES[data_type] = {
+            'name': data_type,
+            'scenarios': data_scenarios,
+            'scenarios_count': data_scenarios_count,
+            'species': None,
+            'units': precalc_dict['units'],
+            'date': data_date,
+            'date_count': data_date_count,
+            'data': data[data_key][date_indexes].round(DATA_DP),
+            'has_perc': has_perc
+        }
+    # else, there is a species dimension:
+    else:
+        # loop through species:
+        for i, specie in enumerate(data['specie'][:]):
+            # data type key is data type + species name:
+            data_type_key = '{0}_{1}'.format(
+                data_type, specie.replace(' ', '_')
+            )
+            # if this data has units:
+            if 'units' in data_vars:
+                specie_units = data['units'][i]
+            else:
+                specie_units = precalc_dict['units']
+            # if this data has percentiles:
+            if has_perc:
+                species_data = data[data_key][date_indexes][:, :, :, i].round(DATA_DP)
+            else:
+                species_data = data[data_key][date_indexes][:, :, i].round(DATA_DP)
+            # init dict for this data:
+            DATA_TYPES[data_type_key] = {
+                'name': data_type,
+                'scenarios': data_scenarios,
+                'scenarios_count': data_scenarios_count,
+                'species': specie,
+                'units': specie_units,
+                'date': data_date,
+                'date_count': data_date_count,
+                'data': species_data,
+                'has_perc': has_perc
+            }
 
+# loop through all data types:
+for data_type, type_dict in DATA_TYPES.items():
+    # scenarios for this type:
+    scenarios = type_dict['scenarios']
+    # data for this type:
+    type_data = type_dict['data']
+    # init precalc dict for this data:
+    PRECALC_DATA[data_type] = {
+        'name': type_dict['name'],
+        'scenarios': type_dict['scenarios'],
+        'scenarios_count': type_dict['scenarios_count'],
+        'species': type_dict['species'],
+        'units': type_dict['units'],
+        'date': type_dict['date'],
+        'date_count': type_dict['date_count'],
+        'has_perc': type_dict['has_perc']
+    }
+    data_dict = PRECALC_DATA[data_type]
+    # init min and max values:
+    data_dict['min'] = 999999
+    data_dict['max'] = -999999
+    # loop through scenarios:
+    for i, scenario in enumerate(scenarios):
+        # dict for this scenario:
+        data_dict[scenario] = {}
+        scenario_dict = data_dict[scenario]
+        # if this data has percentiles:
+        if type_dict['has_perc']:
+            # 5th percentile values:
+            scenario_dict['perc_5'] = (
+                type_data[:, i, 0].tolist()
+            )
+            # update min value:
+            data_dict['min'] = np.nanmin([
+                data_dict['min'],
+                np.nanmin(scenario_dict['perc_5'])
+            ])
+            # replace NaN values with strings:
+            scenario_dict['perc_5'] = [
+              'NaN' if np.isnan(j) else j
+              for j in scenario_dict['perc_5']
+            ]
+            # 95th percentile values:
+            scenario_dict['perc_95'] = (
+                type_data[:, i, 2].tolist()
+            )
+            # update max value:
+            data_dict['max'] = np.nanmax([
+                data_dict['max'],
+                np.nanmax(scenario_dict['perc_95'])
+            ])
+            # replace NaN values with strings:
+            scenario_dict['perc_95'] = [
+              'NaN' if np.isnan(j) else j
+              for j in scenario_dict['perc_95']
+            ]
+            # median values:
+            scenario_dict['median'] = (
+                type_data[:, i, 1].tolist()
+            )
+            # replace NaN values with strings:
+            scenario_dict['median'] = [
+              'NaN' if np.isnan(j) else j
+              for j in scenario_dict['median']
+            ]
+        # else, no percentiles:
+        else:
+            # data values:
+            scenario_dict['data'] = (
+                type_data[:, i].tolist()
+            )
+            # update min value:
+            data_dict['min'] = np.nanmin([
+                data_dict['min'],
+                np.nanmin(scenario_dict['data'])
+            ])
+            # update max value:
+            data_dict['max'] = np.nanmax([
+                data_dict['max'],
+                np.nanmax(scenario_dict['data'])
+            ])
+            # replace NaN values with strings:
+            scenario_dict['data'] = [
+              'NaN' if np.isnan(j) else j
+              for j in scenario_dict['data']
+            ]
 
-@app.route('/plot_temp')
-def plot_temp(T, years=np.arange(1765,2101)):
-#def plot_temp():
-    fig  = Figure()
-    ax   = fig.add_subplot(1, 1, 1)
-    ax.plot(years, T)
-    ax.set_xlim(1765,2100)
-    ax.set_ylabel('Temperature anomaly since pre-industrial, $^{\circ}$C')
-    ax.set_xlabel('Year')
-    ax.grid()
-#    ax.plot(np.arange(10), np.arange(10)**2)
-    canvas = FigureCanvas(fig)
-    output = BytesIO()
-    canvas.print_png(output)
-    response = output.getvalue()
-    return response
+# done with DATA_TYPES:
+del DATA_TYPES
 
+# ---
+
+# home:
+@app.route('/', methods=['GET'])
+def render_home():
+    """
+    Render home page
+    """
+    # return rendered home page:
+    return render_template(
+        'home.html.j2', current_page='home', header_img=True
+    )
+
+# model page:
+@app.route('/model', methods=['GET'])
+def render_model():
+    """
+    Render model page
+    """
+    # return rendered model page:
+    return render_template(
+        'model.html.j2', current_page='model', header_img=False,
+        scenarios=SCENARIOS, species=SPECIES, default_species=DEFAULT_SPECIES
+    )
+
+# model runnning:
+@app.route('/run', methods=['POST'])
+def run():
+    """
+    Run the model
+    """
+    # get POST data:
+    request_params = request.form
+    # run the model:
+    result = run_model(request_params, data_dir=DATA_DIR)
+    # return the result:
+    return result
+
+# get precalculated model data:
+@app.route('/get', methods=['POST'])
+def get():
+    """
+    Get precalculated model data
+    """
+    # get POST data:
+    request_params = request.form
+    # get the model data:
+    result = run_model(request_params, precalc_data=PRECALC_DATA)
+    # return the result:
+    return result
+
+# about:
+@app.route('/about', methods=["GET"])
+def render_contact():
+    """
+    Render about page
+    """
+    # return rendered contact page:
+    return render_template(
+        'about.html.j2', current_page='about', header_img=False
+    )
+
+# error:
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """
+    Handle errors
+    """
+    return render_template(
+        'error.html.j2', current_page='error', error=error.description
+    ), error.code
 
 if __name__ == '__main__':
-    app.debug = True
-    app.run()
+    app.run(debug=True)
