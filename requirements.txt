@@ -1,7 +1,5 @@
-fair==1.6.4
-flask
-flask-wtf
-python-dotenv
-scipy
-numpy
-matplotlib
+flask==3.0.3
+fair==2.2.4
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0

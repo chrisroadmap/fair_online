@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FaIR Climate Model Dashboard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='plotly.min.js') }}"></script>
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>FaIR Climate Model Dashboard</h1>
+      <p class="subtitle">Run scenarios, tune the climate response, and explore the results interactively &mdash; powered by the <a href="https://docs.fairmodel.net/" target="_blank" rel="noopener">FaIR</a> (Finite-amplitude Impulse-Response) simple climate model.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <aside class="controls-panel" id="controls-panel">
+
+      <section class="control-group">
+        <h2>Emissions scenario</h2>
+        <label for="scenario-select">Preset pathway</label>
+        <select id="scenario-select"></select>
+        <p class="hint" id="scenario-subtitle"></p>
+      </section>
+
+      <section class="control-group">
+        <h2>Climate response</h2>
+
+        <label for="ecs-slider">
+          Equilibrium climate sensitivity (ECS)
+          <span class="value-badge" id="ecs-value">3.0&deg;C</span>
+        </label>
+        <input type="range" id="ecs-slider" min="1.5" max="6.5" step="0.1" value="3.0">
+        <p class="hint">Warming (&deg;C) once the climate fully equilibrates to a doubling of CO&#8322;. AR6 likely range shown by the shaded band below.</p>
+        <div class="range-track" id="ecs-range-track"><div class="range-band" id="ecs-range-band"></div></div>
+
+        <label for="ohu-slider">
+          Ocean heat uptake efficiency
+          <span class="value-badge" id="ohu-value">1.0&times;</span>
+        </label>
+        <input type="range" id="ohu-slider" min="0.3" max="3.0" step="0.05" value="1.0">
+        <p class="hint">Higher values mean the deep ocean absorbs heat faster, slowing near-term surface warming (and lowering the resulting TCR) without changing ECS.</p>
+
+        <label for="aerosol-slider">
+          Aerosol forcing strength
+          <span class="value-badge" id="aerosol-value">1.0&times;</span>
+        </label>
+        <input type="range" id="aerosol-slider" min="0.3" max="2.0" step="0.05" value="1.0">
+        <p class="hint">Scales the cooling effect of aerosol&ndash;radiation and aerosol&ndash;cloud interactions. This is one of the largest uncertainties in current warming.</p>
+
+        <label for="co2-forcing-slider">
+          CO&#8322; forcing strength
+          <span class="value-badge" id="co2-forcing-value">1.0&times;</span>
+        </label>
+        <input type="range" id="co2-forcing-slider" min="0.8" max="1.2" step="0.01" value="1.0">
+        <p class="hint">Scales the radiative forcing per unit of CO&#8322;.</p>
+
+        <div class="diagnostic-row">
+          <div class="stat-tile-mini"><span class="label">Resulting ECS</span><span class="value" id="diag-ecs">3.0&deg;C</span></div>
+          <div class="stat-tile-mini"><span class="label">Resulting TCR</span><span class="value" id="diag-tcr">&mdash;</span></div>
+        </div>
+
+        <button class="link-btn" id="toggle-advanced">Show advanced physical parameters &#9662;</button>
+        <div id="advanced-panel" class="advanced-panel hidden">
+          <p class="hint">These are the native FaIR three-layer energy-balance parameters. Editing them overrides the sliders above.</p>
+          <div class="advanced-grid" id="advanced-grid"></div>
+          <button class="secondary-btn small" id="reset-advanced">Reset to central estimate</button>
+        </div>
+      </section>
+
+      <section class="control-group">
+        <h2>Custom emissions <span class="hint-inline">(from 2023 onward)</span></h2>
+        <p class="hint">Override the future emissions trajectory for key species. Values before 2023 always follow observed history.</p>
+        <div id="emissions-editor"></div>
+      </section>
+
+      <section class="control-group actions">
+        <button class="primary-btn" id="run-btn">Run scenario</button>
+        <button class="secondary-btn" id="reset-btn">Reset all to defaults</button>
+        <label class="checkbox-row">
+          <input type="checkbox" id="keep-comparison-chk">
+          Keep this run on screen for comparison
+        </label>
+        <button class="secondary-btn small" id="clear-comparison-btn">Clear comparison</button>
+      </section>
+
+    </aside>
+
+    <section class="results-panel">
+
+      <div class="kpi-row" id="kpi-row">
+        <div class="stat-tile"><span class="label">Warming by 2024</span><span class="value" id="kpi-2024">&mdash;</span><span class="unit">&deg;C vs 1850&ndash;1900</span></div>
+        <div class="stat-tile"><span class="label">Warming by 2050</span><span class="value" id="kpi-2050">&mdash;</span><span class="unit">&deg;C vs 1850&ndash;1900</span></div>
+        <div class="stat-tile"><span class="label">Warming by 2100</span><span class="value" id="kpi-2100">&mdash;</span><span class="unit">&deg;C vs 1850&ndash;1900</span></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Global mean temperature anomaly</h3>
+        <div id="chart-temperature" class="chart"></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Effective radiative forcing by contributor</h3>
+        <div id="chart-forcing" class="chart"></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Greenhouse gas concentrations</h3>
+        <div class="small-multiples" id="chart-concentrations"></div>
+      </div>
+
+      <div class="chart-card" id="emissions-preview-card" style="display:none;">
+        <h3>Emissions trajectories used in this run</h3>
+        <div id="chart-emissions" class="chart"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="table-toggle-row">
+          <h3>Underlying data</h3>
+          <div>
+            <button class="secondary-btn small" id="toggle-table-btn">Show data table</button>
+            <button class="secondary-btn small" id="download-btn">Download CSV</button>
+          </div>
+        </div>
+        <div id="data-table-wrap" class="hidden"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Climate simulations use <a href="https://docs.fairmodel.net/" target="_blank" rel="noopener">FaIR v2.2</a>, calibrated and constrained against observations and CMIP6 with the
+      <strong>fair-calibrate v1.4.1</strong> ensemble (Smith et al., 2024, <a href="https://doi.org/10.5194/egusphere-2024-708" target="_blank" rel="noopener">egusphere-2024-708</a>).
+      Emissions pathways are the AR6 Working Group III scenario categories used in that calibration. This tool is for exploration and teaching &mdash; not a substitute for
+      the full assessed literature (IPCC AR6) when making decisions.
+    </p>
+  </footer>
+
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
