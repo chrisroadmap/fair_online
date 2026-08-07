@@ -1,6 +1,6 @@
 """Core simulation engine wrapping the FaIR simple climate model.
 
-Loads the bundled fair-calibrate v1.4.1 data once at import time, and exposes
+Loads the bundled fair-calibrate v1.6.0 data once at import time, and exposes
 a single `run_scenario()` function that the Flask app calls per request.
 """
 import json
@@ -22,41 +22,87 @@ CENTRAL_CONFIG_FILE = os.path.join(DATA_DIR, "central_config.csv")
 EMISSIONS_FILE = os.path.join(DATA_DIR, "emissions.csv")
 NATURAL_FORCING_FILE = os.path.join(DATA_DIR, "natural_forcing.csv")
 CLIMATE_META_FILE = os.path.join(DATA_DIR, "climate_meta.json")
+# The species_configs "defaults" file used to seed every non-calibration-
+# ensemble parameter (carbon-cycle/lifetime terms, radiative efficiencies,
+# etc.): the real v1.6.0 species_configs_properties.csv values, with FaIR's
+# own bundled AR6-default file filling in any genuinely missing cell (see
+# prep_v160.py section 5). Species introduced in v1.6.0 that aren't in
+# FaIR's older AR6 defaults (currently just "Irrigation") get an all-NaN
+# fallback where the v1.6.0 file itself is also NaN -- harmless, since
+# Irrigation is forcing-driven and those NaN cells are for parameters (iirf,
+# radiative efficiency, etc.) that only apply to emissions/concentration-
+# driven species.
+SPECIES_DEFAULTS_FILE = os.path.join(DATA_DIR, "species_defaults_merged.csv")
+# Observed reference series from "Indicators of Global Climate Change 2025"
+# (Climate Indicator Project, https://github.com/ClimateIndicator/data),
+# overplotted on the temperature and concentration charts. GMST is annual
+# mean surface temperature 1850-2025, already anomalised against the
+# 1850-1900 mean (verified: the mean of 1850-1900 in this file is ~0.00C),
+# matching this app's own temperature baseline exactly, so no rebaselining
+# is needed. Concentrations cover CO2/CH4/N2O 1750-2025, with a gap between
+# the single 1750 pre-industrial reference point and the continuous annual
+# series from 1850 onward (no annual data in between is published).
+OBSERVED_GMST_FILE = os.path.join(DATA_DIR, "observed_gmst.csv")
+OBSERVED_GHG_FILE = os.path.join(DATA_DIR, "observed_ghg_concentrations.csv")
 
 YEAR_START = 1750
 YEAR_END = 2100
 
 SCENARIOS = {
-    "verylow": {
+    "VL": {
         "label": "Very low emissions",
-        "subtitle": "Rapid mitigation — roughly SSP1-1.9-like",
+        "subtitle": "Rapid, deep mitigation, net-negative CO2 well before 2100 — roughly SSP1-1.9-like",
+        "approx_2100_warming": "~1.4°C",
+    },
+    "LN": {
+        "label": "Low emissions, temporary overshoot",
+        "subtitle": "Emissions persist near mid-century, then a rapid switch to strong net-negative CO2 pulls the trajectory back down by 2100",
+        "approx_2100_warming": "~1.6°C",
+    },
+    "L": {
+        "label": "Low emissions",
+        "subtitle": "Strong mitigation, net-negative CO2 by end of century — roughly SSP1-2.6-like",
         "approx_2100_warming": "~1.7°C",
     },
-    "verylow-overshoot": {
-        "label": "Very low, temporary overshoot",
-        "subtitle": "Peaks then declines faster than Very Low",
-        "approx_2100_warming": "~2.0°C",
+    "ML": {
+        "label": "Medium-low emissions",
+        "subtitle": "Substantial near-term emissions declining to net-negative CO2 by 2100",
+        "approx_2100_warming": "~2.2°C",
     },
-    "low": {
-        "label": "Low emissions",
-        "subtitle": "Strong mitigation — roughly SSP1-2.6-like",
-        "approx_2100_warming": "~2.1°C",
-    },
-    "medium-overshoot": {
+    "M": {
         "label": "Medium emissions",
-        "subtitle": "Roughly SSP2-4.5-like, emissions decline from mid-century",
-        "approx_2100_warming": "~3.1°C",
+        "subtitle": "Roughly SSP2-4.5-like; emissions plateau and only decline modestly this century",
+        "approx_2100_warming": "~2.8°C",
     },
-    "high-overshoot": {
+    "H": {
         "label": "High emissions",
-        "subtitle": "Limited mitigation — roughly SSP3-7.0-like",
-        "approx_2100_warming": "~3.8°C",
+        "subtitle": "Limited mitigation, emissions keep rising through 2100 — roughly SSP3-7.0-like",
+        "approx_2100_warming": "~3.3°C",
+    },
+    "HL": {
+        "label": "High emissions, late-century drawdown",
+        "subtitle": "Emissions stay high (comparable to the High pathway) through mid-century, then fall sharply toward net-zero CO2 by 2100 — a high-legacy, late-overshoot pathway",
+        "approx_2100_warming": "~2.7°C",
     },
 }
-# "medium-extension" and "high-extension" are also in the underlying
-# fair-calibrate data (identical to their "-overshoot" siblings through 2100,
-# diverging only afterwards) but are omitted from the UI list since this
-# dashboard's default time horizon ends in 2100.
+# Codes and ordering follow the ScenarioMIP-CMIP7 categories bundled with
+# fair-calibrate v1.6.0 (VL, LN, L, ML, M, H, HL), replacing the AR6 WG3
+# scenario names used with v1.4.1. The "approx_2100_warming" figures are this
+# app's own central-estimate run (default climate response, no user
+# overrides) for each scenario, so they stay internally consistent with what
+# the app actually shows -- they are not independently sourced literature
+# values. Subtitles are written from inspecting each scenario's actual CO2
+# emissions trajectory (see prep_v160.py's SCENARIO_MAP), since some of the
+# category names (e.g. "HL" / high-legacy) describe a near-term emissions
+# profile rather than the end-of-century warming ranking -- HL's late-century
+# drawdown to near net-zero CO2 by 2100 means it ends up cooler by 2100 than
+# the continuously-rising "H" pathway, despite higher emissions mid-century.
+#
+# NOTE: the mapping from each raw ScenarioMIP-CMIP7 scenario name (e.g.
+# "SSP5 - Medium-Low Emissions_a" -> "HL") was inferred from the scenario
+# names and their emissions profiles, since Zenodo and the ScenarioMIP-CMIP7
+# GitHub repo were both unreachable from this environment to check against
+# an official crosswalk table -- confirmed correct directly by Chris.
 
 # Species users are allowed to hand-edit emissions trajectories for.
 EDITABLE_SPECIES = ["CO2 FFI", "CO2 AFOLU", "CH4", "N2O", "Sulfur"]
@@ -91,6 +137,35 @@ _BASE_C = [_CENTRAL_ROW[f"ocean_heat_capacity[{i}]"] for i in range(3)]
 _BASE_K = [_CENTRAL_ROW[f"ocean_heat_transfer[{i}]"] for i in range(3)]
 _BASE_EPS = _CENTRAL_ROW["deep_ocean_efficacy"]
 _BASE_F4 = _CENTRAL_ROW["forcing_4co2"]
+
+_OBSERVED_GMST_DF = pd.read_csv(OBSERVED_GMST_FILE)
+_OBSERVED_GHG_DF = pd.read_csv(OBSERVED_GHG_FILE)
+
+
+def observed_data():
+    """IGCC 2025 observed GMST (1850-2025, vs 1850-1900) and CO2/CH4/N2O
+    concentrations (1750-2025), for overlaying on the model charts."""
+    return {
+        "gmst": {
+            "years": _OBSERVED_GMST_DF["year"].tolist(),
+            "values": _OBSERVED_GMST_DF["GMST"].tolist(),
+        },
+        "concentrations": {
+            "co2": {
+                "years": _OBSERVED_GHG_DF["year"].tolist(),
+                "values": _OBSERVED_GHG_DF["CO2"].tolist(),
+            },
+            "ch4": {
+                "years": _OBSERVED_GHG_DF["year"].tolist(),
+                "values": _OBSERVED_GHG_DF["CH4"].tolist(),
+            },
+            "n2o": {
+                "years": _OBSERVED_GHG_DF["year"].tolist(),
+                "values": _OBSERVED_GHG_DF["N2O"].tolist(),
+            },
+        },
+        "source": "Indicators of Global Climate Change 2025 (Climate Indicator Project)",
+    }
 
 
 def _emergent_ecs_tcr(kappa, capacity, epsilon, forcing_4co2):
@@ -210,10 +285,11 @@ def run_scenario(
     # Start from fair's own bundled AR6 default species configs (this is the
     # file that has sensible numeric values for every species, including the
     # iirf/lifetime-feedback terms the fair-calibrate metadata file leaves
-    # blank). The fair-calibrate central-ensemble-member values applied next
-    # override CO2's carbon-cycle feedback, aerosol radiative efficiencies,
-    # and the climate response parameters on top of this baseline.
-    f.fill_species_configs()
+    # blank), re-indexed onto our full v1.6.0 species list. The
+    # fair-calibrate central-ensemble-member values applied next override
+    # CO2's carbon-cycle feedback, aerosol radiative efficiencies, and the
+    # climate response parameters on top of this baseline.
+    f.fill_species_configs(SPECIES_DEFAULTS_FILE)
     # apply the central-ensemble-member species-level params (radiative
     # efficiencies, iirf, aci params etc.) to our single "run" config
     for col in _CENTRAL_ROW.index:
@@ -264,8 +340,23 @@ def run_scenario(
         if specie in EDITABLE_SPECIES:
             emissions_echo[specie] = interp.tolist()
 
-    for specie, rcname in [("Volcanic", "Volcanic"), ("Solar", "Solar")]:
-        row = _NATURAL_DF[(_NATURAL_DF["Scenario"] == scenario) & (_NATURAL_DF["Variable"] == rcname)]
+    # FaIR requires every "forcing"-input-mode species to have a fully
+    # non-NaN forcing timeseries (it raises ValueError otherwise), so every
+    # such species must be explicitly filled here -- there's no "leave it
+    # NaN and let nansum ignore it" option, unlike emissions/concentration
+    # species. All four "forcing"-input-mode species in the v1.6.0 species
+    # list -- Volcanic, Solar, Land use, and Irrigation (new in v1.6.0; Land
+    # use was "calculated" from AFOLU emissions in v1.4.1, Irrigation didn't
+    # exist at all) -- are covered by CMIP7 per-scenario timeseries bundled
+    # in natural_forcing.csv. The zero-fill fallback below is now just a
+    # safety net in case a species is ever added here without bundled data.
+    for specie in _SPECIES:
+        if _PROPERTIES[specie]["input_mode"] != "forcing":
+            continue
+        row = _NATURAL_DF[(_NATURAL_DF["Scenario"] == scenario) & (_NATURAL_DF["Variable"] == specie)]
+        if len(row) == 0:
+            fill(f.forcing, 0.0, specie=specie, scenario=scenario)
+            continue
         vals = row[_NAT_YEAR_COLS].values.squeeze().astype(float)
         interp = np.interp(f.timebounds, _NAT_YEARS, vals)
         fill(f.forcing, interp[:, None], specie=specie, scenario=scenario)

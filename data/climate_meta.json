@@ -1,21 +1,21 @@
 {
-  "central_config_source_id": 1203991,
-  "central_ecs": 2.9636542210760206,
-  "central_tcr": 1.681693127913178,
+  "central_config_source": "per-parameter median across the 841-member ensemble (forcing_scale columns forced to 1.0)",
+  "central_ecs": 3.0214471675095216,
+  "central_tcr": 1.758406382988936,
   "ecs_percentiles": {
-    "5": 2.0117501376544427,
-    "16": 2.2879930126383448,
-    "50": 2.9636542210760206,
-    "84": 4.082477982531965,
-    "95": 4.98653254439247
+    "5": 1.9748693470534762,
+    "16": 2.2551637933353597,
+    "50": 2.989922703718632,
+    "84": 4.128363156951626,
+    "95": 5.030302041689287
   },
   "tcr_percentiles": {
-    "5": 1.312192207947919,
-    "16": 1.4905401847373925,
-    "50": 1.7945822590203162,
-    "84": 2.1264676436730396,
-    "95": 2.3773560669919576
+    "5": 1.2875984939812795,
+    "16": 1.4762063388255648,
+    "50": 1.78508150151028,
+    "84": 2.138398806835946,
+    "95": 2.3886431345060903
   },
   "n_ensemble_members": 841,
-  "calibration_version": "fair-calibrate v1.4.1 (Smith et al., EGUsphere 2024, https://doi.org/10.5194/egusphere-2024-708)"
+  "calibration_version": "fair-calibrate v1.6.0 (FASTMIP Phase 1; CMIP7 historical forcing 1750-2023; IGCC 2024 temperature constraints)"
 }

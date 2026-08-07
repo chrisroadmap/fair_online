@@ -40,12 +40,13 @@ def api_config():
                 "epsilon": fe._BASE_EPS,
                 "forcing_4co2": fe._BASE_F4,
             },
+            "observed": fe.observed_data(),
         }
     )
 
 
 def _parse_run_request(body):
-    scenario = body.get("scenario", "medium-overshoot")
+    scenario = body.get("scenario", "M")
     ecs = body.get("ecs")
     ecs = float(ecs) if ecs is not None else None
     ohu_scale = float(body.get("ocean_heat_uptake_scale", 1.0))
