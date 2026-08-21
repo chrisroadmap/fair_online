@@ -388,6 +388,11 @@ def run_scenario(
     forcing_total = f.forcing_sum.sel(scenario=scenario, config="run").values
     conc_co2 = f.concentration.sel(scenario=scenario, config="run", specie="CO2").values
     conc_ch4 = f.concentration.sel(scenario=scenario, config="run", specie="CH4").values
+    # TODO: modelled N2O concentrations deviate from the observed IGCC 2025
+    # series by more than CO2/CH4 do -- investigate (lifetime/iirf params
+    # for N2O in species_defaults_merged.csv? natural emissions baseline?
+    # the CH4 fix in prep_v160.py section 5 was analogous -- check whether
+    # N2O has the same stale-AR6-default fallback issue).
     conc_n2o = f.concentration.sel(scenario=scenario, config="run", specie="N2O").values
 
     def forcing_of(specie):
