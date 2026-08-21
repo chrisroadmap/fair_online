@@ -5,6 +5,7 @@ a single `run_scenario()` function that the Flask app calls per request.
 """
 import json
 import os
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -179,10 +180,10 @@ def _emergent_ecs_tcr(kappa, capacity, epsilon, forcing_4co2):
 
 
 def solve_kappa0_for_ecs(target_ecs):
-    """Return the scale factor on the base (multi-model) kappa[0] that gives
-    the requested equilibrium climate sensitivity, holding kappa[1], kappa[2],
-    ocean heat capacities and deep-ocean efficacy fixed at their central
-    (fair-calibrate v1.4.1 median) values."""
+    """Return the scale factor on the base kappa[0] (from the selected
+    central ensemble member) that gives the requested equilibrium climate
+    sensitivity, holding kappa[1], kappa[2], ocean heat capacities and
+    deep-ocean efficacy fixed at that member's values."""
 
     def f(scale):
         ecs, _ = _emergent_ecs_tcr([_BASE_K[0] * scale, _BASE_K[1], _BASE_K[2]], _BASE_C, _BASE_EPS, _BASE_F4)
@@ -420,6 +421,21 @@ def run_scenario(
         "warming_2024": float(temp_anomaly[years == 2024][0]) if 2024 in years else None,
     }
     return result
+
+
+@lru_cache(maxsize=1)
+def aerosol_forcing_reference_wm2():
+    """Mean aerosol ERF (radiation + cloud interactions) over 2005-2014 at
+    aerosol_forcing_scale=1.0, used to display the aerosol slider in
+    absolute W/m^2 instead of a unitless scale factor. Scenario-independent:
+    aerosol-precursor emissions are identical across all 7 scenarios prior
+    to 2023 (verified against data/emissions.csv), and aerosol forcing
+    doesn't depend on ECS/OHU/CO2 forcing scale, so any one scenario run at
+    the default climate response gives the same reference value."""
+    result = run_scenario(scenario=next(iter(SCENARIOS)), aerosol_forcing_scale=1.0)
+    years = np.array(result["years"])
+    mask = (years >= 2005) & (years <= 2014)
+    return float(np.mean(np.array(result["forcing_aerosol"])[mask]))
 
 
 def list_scenarios():
