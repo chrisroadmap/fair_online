@@ -1,10 +1,40 @@
-# How to run in development environment
+# fair_online
 
-First, make sure you copy over config.cfg file
+Interactive web dashboard for the [FaIR](https://github.com/OMS-NetZero/FAIR)
+simple climate model. Pick an emissions scenario, adjust climate parameters
+(ECS, ocean heat uptake, forcing scales), run FaIR, and view/download the
+resulting temperature and forcing pathways.
 
+Live at [fairmodel.net](https://fairmodel.net).
+
+## Layout
+
+- `app.py` — Flask app (current entry point; also what `wsgi.py` serves in production)
+- `fair_engine.py` — wraps `fair` v2.2.4 model runs
+- `templates/index.html`, `static/{app.js,style.css,plotly.min.js}` — frontend
+- `data/` — bundled calibration and emissions data (no network access needed at runtime)
+
+`flask_app.py` and `templates/fair.html` are an older FaIR v1.x prototype,
+superseded by `app.py`, and unused by `wsgi.py`.
+
+## Local development
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install -r requirements.txt --python .venv/bin/python
+.venv/bin/python app.py
 ```
-export FLASK_APP=flask_app
-export FLASK_ENV=development
-export APPLICATION_SETTINGS=config.cfg
-flask run
-```
+
+Visit http://127.0.0.1:5050.
+
+## Deployment
+
+See [`DEPLOY.md`](DEPLOY.md) for the full PythonAnywhere setup and update procedure.
+
+## Data & attribution
+
+Bundled calibration and emissions data are from the **fair-calibrate v1.4.1**
+ensemble (Smith et al., 2024, https://doi.org/10.5194/egusphere-2024-708) and
+the AR6 WGIII scenario categories via
+[OMS-NetZero/FAIR](https://github.com/OMS-NetZero/FAIR). Climate simulation
+uses the **FaIR** simple climate model (`fair` package v2.2.4).
