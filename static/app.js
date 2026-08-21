@@ -60,7 +60,7 @@ function populateScenarioSelect() {
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = meta.label;
-    if (key === 'medium-overshoot') opt.selected = true;
+    if (key === 'M') opt.selected = true;
     sel.appendChild(opt);
   }
   updateScenarioSubtitle();
@@ -247,6 +247,14 @@ function renderTemperatureChart(result) {
       line: { color: COLORS.muted, width: 2, dash: 'dash' },
     });
   }
+  const gmst = CONFIG && CONFIG.observed && CONFIG.observed.gmst;
+  if (gmst) {
+    traces.push({
+      x: gmst.years, y: gmst.values,
+      type: 'scatter', mode: 'lines', name: 'Observed (IGCC 2025)',
+      line: { color: '#000000', width: 1.5 },
+    });
+  }
   Plotly.react('chart-temperature', traces, baseLayout({ yaxis: { title: '°C vs 1850–1900', gridcolor: COLORS.gridline } }), PLOTLY_CONFIG);
 }
 
@@ -274,15 +282,25 @@ function renderConcentrationCharts(result) {
     ['ch4', 'CH₄ (ppb)', result.concentration_ch4, COLORS.series2],
     ['n2o', 'N₂O (ppb)', result.concentration_n2o, COLORS.series3],
   ];
+  const observedConc = CONFIG && CONFIG.observed && CONFIG.observed.concentrations;
   panels.forEach(([id, title, data, color]) => {
     const div = document.createElement('div');
     div.className = 'mini-chart';
     div.id = 'conc-' + id;
     container.appendChild(div);
-    Plotly.react(div.id, [{
+    const traces = [{
       x: result.years, y: data.map((v) => Number(v.toFixed(2))),
       type: 'scatter', mode: 'lines', name: title, line: { color, width: 2 }, showlegend: false,
-    }], baseLayout({ margin: { t: 26, r: 10, l: 45, b: 30 }, title: { text: title, font: { size: 12, color: COLORS.textSecondary } }, legend: { visible: false } }), PLOTLY_CONFIG);
+    }];
+    const obs = observedConc && observedConc[id];
+    if (obs) {
+      traces.push({
+        x: obs.years, y: obs.values,
+        type: 'scatter', mode: 'lines', name: 'Observed (IGCC 2025)',
+        line: { color: '#000000', width: 1.5 }, showlegend: false,
+      });
+    }
+    Plotly.react(div.id, traces, baseLayout({ margin: { t: 26, r: 10, l: 45, b: 30 }, title: { text: title, font: { size: 12, color: COLORS.textSecondary } }, legend: { visible: false } }), PLOTLY_CONFIG);
   });
 }
 
