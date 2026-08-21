@@ -123,7 +123,8 @@ virtualenv again unless you add a new Python dependency (in which case
 - `data/species_configs_properties.csv`, `data/central_config.csv` — species
   and climate parameters from the **fair-calibrate v1.6.0** ensemble
   ("FASTMIP Phase 1"; CMIP7 historical forcing 1750–2023; IGCC 2024
-  temperature constraints). The "central" configuration is the
+  temperature constraints), https://doi.org/10.5281/zenodo.18828694. The
+  "central" configuration is the
   per-parameter **median** across the full 841-member ensemble (each column
   of `calibrated_constrained_parameters.csv` taken at its own median,
   rather than picking one real ensemble member), which comes out to
