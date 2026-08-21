@@ -50,59 +50,58 @@ YEAR_END = 2100
 
 SCENARIOS = {
     "VL": {
-        "label": "Very low emissions",
+        "label": "Very Low emission scenario (VL)",
         "subtitle": "Rapid, deep mitigation, net-negative CO2 well before 2100 — roughly SSP1-1.9-like",
         "approx_2100_warming": "~1.4°C",
     },
     "LN": {
-        "label": "Low emissions, temporary overshoot",
+        "label": "Low-to-Negative emission scenario (LN)",
         "subtitle": "Emissions persist near mid-century, then a rapid switch to strong net-negative CO2 pulls the trajectory back down by 2100",
         "approx_2100_warming": "~1.6°C",
     },
     "L": {
-        "label": "Low emissions",
+        "label": "Low emission scenario (L)",
         "subtitle": "Strong mitigation, net-negative CO2 by end of century — roughly SSP1-2.6-like",
         "approx_2100_warming": "~1.7°C",
     },
     "ML": {
-        "label": "Medium-low emissions",
+        "label": "Medium-to-Low emission scenario (ML)",
         "subtitle": "Substantial near-term emissions declining to net-negative CO2 by 2100",
         "approx_2100_warming": "~2.2°C",
     },
     "M": {
-        "label": "Medium emissions",
+        "label": "Medium emission scenario (M)",
         "subtitle": "Roughly SSP2-4.5-like; emissions plateau and only decline modestly this century",
         "approx_2100_warming": "~2.8°C",
     },
     "H": {
-        "label": "High emissions",
+        "label": "High emission scenario (H)",
         "subtitle": "Limited mitigation, emissions keep rising through 2100 — roughly SSP3-7.0-like",
         "approx_2100_warming": "~3.3°C",
     },
     "HL": {
-        "label": "High emissions, late-century drawdown",
+        "label": "High-to-Low emission scenario (HL)",
         "subtitle": "Emissions stay high (comparable to the High pathway) through mid-century, then fall sharply toward net-zero CO2 by 2100 — a high-legacy, late-overshoot pathway",
         "approx_2100_warming": "~2.7°C",
     },
 }
-# Codes and ordering follow the ScenarioMIP-CMIP7 categories bundled with
-# fair-calibrate v1.6.0 (VL, LN, L, ML, M, H, HL), replacing the AR6 WG3
-# scenario names used with v1.4.1. The "approx_2100_warming" figures are this
-# app's own central-estimate run (default climate response, no user
-# overrides) for each scenario, so they stay internally consistent with what
-# the app actually shows -- they are not independently sourced literature
-# values. Subtitles are written from inspecting each scenario's actual CO2
-# emissions trajectory (see prep_v160.py's SCENARIO_MAP), since some of the
-# category names (e.g. "HL" / high-legacy) describe a near-term emissions
-# profile rather than the end-of-century warming ranking -- HL's late-century
+# Codes, ordering, and labels follow the seven ScenarioMIP-CMIP7 categories
+# exactly as named in:
+#   Van Vuuren, D. P., O'Neill, B. C., Tebaldi, C., et al. (2026). "The
+#   Scenario Model Intercomparison Project for CMIP7 (ScenarioMIP-CMIP7)."
+#   Geoscientific Model Development, 19, 2627-2656.
+#   https://doi.org/10.5194/gmd-19-2627-2026
+# (VL, LN, L, ML, M, H, HL), replacing the AR6 WG3 scenario names used with
+# fair-calibrate v1.4.1. The "approx_2100_warming" figures are this app's own
+# central-estimate run (default climate response, no user overrides) for
+# each scenario, so they stay internally consistent with what the app
+# actually shows -- they are not independently sourced literature values.
+# Subtitles are written from inspecting each scenario's actual CO2 emissions
+# trajectory (see prep_v160.py's SCENARIO_MAP), since some of the category
+# names (e.g. "HL" / high-legacy) describe a near-term emissions profile
+# rather than the end-of-century warming ranking -- HL's late-century
 # drawdown to near net-zero CO2 by 2100 means it ends up cooler by 2100 than
 # the continuously-rising "H" pathway, despite higher emissions mid-century.
-#
-# NOTE: the mapping from each raw ScenarioMIP-CMIP7 scenario name (e.g.
-# "SSP5 - Medium-Low Emissions_a" -> "HL") was inferred from the scenario
-# names and their emissions profiles, since Zenodo and the ScenarioMIP-CMIP7
-# GitHub repo were both unreachable from this environment to check against
-# an official crosswalk table -- confirmed correct directly by Chris.
 
 # Species users are allowed to hand-edit emissions trajectories for.
 EDITABLE_SPECIES = ["CO2 FFI", "CO2 AFOLU", "CH4", "N2O", "Sulfur"]
