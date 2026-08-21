@@ -234,6 +234,15 @@ input[type="range"] {
 }
 .primary-btn:hover { filter: brightness(1.08); }
 .primary-btn:disabled { opacity: 0.6; cursor: default; }
+.primary-btn.small { padding: 6px 12px; font-size: 12px; flex-shrink: 0; }
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-header-row h2 { margin: 0; }
 .secondary-btn {
   background: var(--surface-1);
   color: var(--text-primary);

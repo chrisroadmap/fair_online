@@ -194,9 +194,8 @@ function fmt(n, digits = 2) {
 }
 
 async function runScenario() {
-  const btn = document.getElementById('run-btn');
-  btn.disabled = true;
-  btn.textContent = 'Running…';
+  const btns = document.querySelectorAll('.run-btn');
+  btns.forEach((btn) => { btn.disabled = true; btn.textContent = 'Running…'; });
   try {
     const body = gatherRequestBody();
     const resp = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -215,8 +214,7 @@ async function runScenario() {
     lastParams = body;
     renderAll(result);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Run scenario';
+    btns.forEach((btn) => { btn.disabled = false; btn.textContent = 'Run scenario'; });
   }
 }
 
@@ -371,7 +369,7 @@ function initEventListeners() {
     document.getElementById(id).addEventListener('input', updateSliderBadges);
   });
 
-  document.getElementById('run-btn').addEventListener('click', runScenario);
+  document.querySelectorAll('.run-btn').forEach((btn) => btn.addEventListener('click', runScenario));
   document.getElementById('reset-btn').addEventListener('click', resetAllControls);
   document.getElementById('download-btn').addEventListener('click', downloadCSV);
 
