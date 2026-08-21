@@ -1,7 +1,7 @@
 {
-  "central_config_source": "per-parameter median across the 841-member ensemble (forcing_scale columns forced to 1.0)",
-  "central_ecs": 3.0214471675095216,
-  "central_tcr": 1.758406382988936,
+  "central_config_source": "real ensemble member (index 1140683) selected as closest to the ensemble median jointly across ECS, TCR, and 2005-2014 aerosol ERF -- replaces an earlier per-parameter-median row, which (via the nonlinear aerosol-cloud interaction formula) under-estimated 2005-2014 aerosol ERF by ~0.35 W/m2 relative to the ensemble's true median (-0.97 vs -1.31 W/m2)",
+  "central_ecs": 3.041065953867124,
+  "central_tcr": 1.8306214000359886,
   "ecs_percentiles": {
     "5": 1.9748693470534762,
     "16": 2.2551637933353597,

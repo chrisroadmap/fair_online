@@ -124,16 +124,24 @@ virtualenv again unless you add a new Python dependency (in which case
   and climate parameters from the **fair-calibrate v1.6.0** ensemble
   ("FASTMIP Phase 1"; CMIP7 historical forcing 1750–2023; IGCC 2024
   temperature constraints), https://doi.org/10.5281/zenodo.18828694. The
-  "central" configuration is the
-  per-parameter **median** across the full 841-member ensemble (each column
-  of `calibrated_constrained_parameters.csv` taken at its own median,
-  rather than picking one real ensemble member), which comes out to
-  ECS ≈ 3.02°C, TCR ≈ 1.76°C. All `forcing_scale[...]` columns (the
-  structural scaling factors on each species' forcing formula — CO2, CH4,
-  N2O, the halogenated/minor GHGs, Land use, Irrigation, Volcanic, Solar)
-  are forced to exactly 1.0 in this file rather than using their (typically
-  close-to-but-not-exactly-1) medians, so the default run applies no
-  additional forcing scaling beyond the app's own sliders.
+  "central" configuration is a single **real ensemble member** (index
+  1140683 in `calibrated_constrained_parameters.csv`), selected as the
+  member closest to the ensemble median jointly across ECS, TCR, and
+  2005–2014 aerosol ERF — ECS ≈ 3.04°C, TCR ≈ 1.83°C, aerosol ERF ≈
+  −1.29 W/m². **This replaced a real bug**: an earlier build used a
+  per-parameter median instead (each column of the ensemble taken at its
+  own median rather than picking one real member), which is fine for
+  parameters that scale forcing linearly, but silently broke for the
+  aerosol-cloud interaction term (`aci_scale`/`aci_shape`), which is a
+  nonlinear function of its inputs — plugging in independently-medianed
+  parameters gave a 2005–2014 aerosol ERF of only −0.97 W/m², about 0.35
+  W/m² weaker than the ensemble's real median/mean (−1.31/−1.32 W/m²).
+  Picking one internally-consistent real member fixes this, at the cost of
+  losing the old simplification where every non-CO2 `forcing_scale[...]`
+  column was forced to exactly 1.0 — those now carry this member's own
+  calibrated values too (e.g. Land use ≈0.63×, Solar ≈1.55×), which is the
+  correct trade-off for a single coherent draw rather than a
+  frankencombination of per-parameter medians and forced defaults.
 - `data/species_defaults_merged.csv` — the per-species carbon-cycle/lifetime
   parameters (g0, g1, unperturbed lifetime, iirf terms, radiative
   efficiencies, etc.) that aren't part of the calibration ensemble. This is

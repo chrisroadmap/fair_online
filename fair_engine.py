@@ -180,10 +180,10 @@ def _emergent_ecs_tcr(kappa, capacity, epsilon, forcing_4co2):
 
 
 def solve_kappa0_for_ecs(target_ecs):
-    """Return the scale factor on the base (multi-model) kappa[0] that gives
-    the requested equilibrium climate sensitivity, holding kappa[1], kappa[2],
-    ocean heat capacities and deep-ocean efficacy fixed at their central
-    (fair-calibrate v1.4.1 median) values."""
+    """Return the scale factor on the base kappa[0] (from the selected
+    central ensemble member) that gives the requested equilibrium climate
+    sensitivity, holding kappa[1], kappa[2], ocean heat capacities and
+    deep-ocean efficacy fixed at that member's values."""
 
     def f(scale):
         ecs, _ = _emergent_ecs_tcr([_BASE_K[0] * scale, _BASE_K[1], _BASE_K[2]], _BASE_C, _BASE_EPS, _BASE_F4)
