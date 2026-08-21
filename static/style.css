@@ -36,7 +36,9 @@ a { color: var(--series-1); }
   padding: 24px 32px;
 }
 .header-inner { max-width: 1400px; margin: 0 auto; }
+.header-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .site-header h1 { margin: 0 0 6px 0; font-size: 24px; }
+.docs-link { font-size: 13px; font-weight: 600; white-space: nowrap; }
 .subtitle { margin: 0; color: var(--text-secondary); max-width: 900px; line-height: 1.5; }
 
 .layout {

@@ -12,7 +12,10 @@
 
   <header class="site-header">
     <div class="header-inner">
-      <h1>FaIR Climate Model Dashboard</h1>
+      <div class="header-row">
+        <h1>FaIR Climate Model Dashboard</h1>
+        <a class="docs-link" href="https://docs.fairmodel.net/" target="_blank" rel="noopener">Model documentation &#8599;</a>
+      </div>
       <p class="subtitle">Run scenarios, tune the climate response, and explore the results interactively &mdash; powered by the <a href="https://docs.fairmodel.net/" target="_blank" rel="noopener">FaIR</a> (Finite-amplitude Impulse-Response) simple climate model.</p>
     </div>
   </header>
@@ -51,10 +54,10 @@
 
         <label for="aerosol-slider">
           Aerosol forcing strength
-          <span class="value-badge" id="aerosol-value">1.0&times;</span>
+          <span class="value-badge" id="aerosol-value">&mdash; W/m&sup2;</span>
         </label>
         <input type="range" id="aerosol-slider" min="0.3" max="2.0" step="0.05" value="1.0">
-        <p class="hint">Scales the cooling effect of aerosol&ndash;radiation and aerosol&ndash;cloud interactions. This is one of the largest uncertainties in current warming.</p>
+        <p class="hint">Scales the cooling effect of aerosol&ndash;radiation and aerosol&ndash;cloud interactions. Shown as the resulting effective radiative forcing, averaged over 2005&ndash;2014. This is one of the largest uncertainties in current warming.</p>
 
         <label for="co2-forcing-slider">
           CO&#8322; forcing strength

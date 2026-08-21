@@ -41,6 +41,7 @@ def api_config():
                 "forcing_4co2": fe._BASE_F4,
             },
             "observed": fe.observed_data(),
+            "aerosol_forcing_reference_wm2": fe.aerosol_forcing_reference_wm2(),
         }
     )
 

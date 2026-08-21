@@ -5,6 +5,7 @@ a single `run_scenario()` function that the Flask app calls per request.
 """
 import json
 import os
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -420,6 +421,21 @@ def run_scenario(
         "warming_2024": float(temp_anomaly[years == 2024][0]) if 2024 in years else None,
     }
     return result
+
+
+@lru_cache(maxsize=1)
+def aerosol_forcing_reference_wm2():
+    """Mean aerosol ERF (radiation + cloud interactions) over 2005-2014 at
+    aerosol_forcing_scale=1.0, used to display the aerosol slider in
+    absolute W/m^2 instead of a unitless scale factor. Scenario-independent:
+    aerosol-precursor emissions are identical across all 7 scenarios prior
+    to 2023 (verified against data/emissions.csv), and aerosol forcing
+    doesn't depend on ECS/OHU/CO2 forcing scale, so any one scenario run at
+    the default climate response gives the same reference value."""
+    result = run_scenario(scenario=next(iter(SCENARIOS)), aerosol_forcing_scale=1.0)
+    years = np.array(result["years"])
+    mask = (years >= 2005) & (years <= 2014)
+    return float(np.mean(np.array(result["forcing_aerosol"])[mask]))
 
 
 def list_scenarios():

@@ -360,7 +360,10 @@ function resetAllControls() {
 function updateSliderBadges() {
   document.getElementById('ecs-value').textContent = parseFloat(document.getElementById('ecs-slider').value).toFixed(1) + '°C';
   document.getElementById('ohu-value').textContent = parseFloat(document.getElementById('ohu-slider').value).toFixed(2) + '×';
-  document.getElementById('aerosol-value').textContent = parseFloat(document.getElementById('aerosol-slider').value).toFixed(2) + '×';
+  const aerosolScale = parseFloat(document.getElementById('aerosol-slider').value);
+  const aerosolRef = CONFIG ? CONFIG.aerosol_forcing_reference_wm2 : null;
+  document.getElementById('aerosol-value').textContent =
+    aerosolRef == null ? '—' : (aerosolScale * aerosolRef).toFixed(2) + ' W/m²';
   document.getElementById('co2-forcing-value').textContent = parseFloat(document.getElementById('co2-forcing-slider').value).toFixed(2) + '×';
 }
 
