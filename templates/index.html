@@ -22,7 +22,10 @@
     <aside class="controls-panel" id="controls-panel">
 
       <section class="control-group">
-        <h2>Emissions scenario</h2>
+        <div class="section-header-row">
+          <h2>Emissions scenario</h2>
+          <button class="primary-btn small run-btn" id="run-btn-top">Run scenario</button>
+        </div>
         <label for="scenario-select">Preset pathway</label>
         <select id="scenario-select"></select>
         <p class="hint" id="scenario-subtitle"></p>
@@ -80,7 +83,7 @@
       </section>
 
       <section class="control-group actions">
-        <button class="primary-btn" id="run-btn">Run scenario</button>
+        <button class="primary-btn run-btn" id="run-btn">Run scenario</button>
         <button class="secondary-btn" id="reset-btn">Reset all to defaults</button>
         <label class="checkbox-row">
           <input type="checkbox" id="keep-comparison-chk">
