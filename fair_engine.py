@@ -231,7 +231,15 @@ def climate_config_from_params(ecs=None, ocean_heat_uptake_scale=1.0, advanced=N
     """Build the final (kappa, capacity, epsilon, forcing_4co2) tuple plus the
     resulting emergent ECS/TCR, from either the simple sliders (ecs +
     ocean_heat_uptake_scale) or an `advanced` dict overriding raw parameters
-    directly. `advanced`, if given, takes precedence."""
+    directly. `advanced`, if given, takes precedence.
+
+    ocean_heat_uptake_scale scales kappa[1] and kappa[2] (the surface<->mid
+    and mid<->deep heat exchange coefficients), not ocean_heat_capacity.
+    These set the fast-mode timescale that TCR is sensitive to and ECS is
+    not, so the slider moves TCR over a wide range while leaving ECS fixed.
+    Scaling capacity[0] instead (the previous approach) left TCR nearly flat
+    across the slider's full range, since that timescale stayed far below
+    the 70-year TCR window regardless."""
     kappa = list(_BASE_K)
     capacity = list(_BASE_C)
     epsilon = _BASE_EPS
@@ -240,7 +248,8 @@ def climate_config_from_params(ecs=None, ocean_heat_uptake_scale=1.0, advanced=N
     if ecs is not None:
         scale = solve_kappa0_for_ecs(ecs)
         kappa[0] = _BASE_K[0] * scale
-    capacity[0] = _BASE_C[0] * ocean_heat_uptake_scale
+    kappa[1] = _BASE_K[1] * ocean_heat_uptake_scale
+    kappa[2] = _BASE_K[2] * ocean_heat_uptake_scale
 
     if advanced:
         if "kappa" in advanced:
