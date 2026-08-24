@@ -121,6 +121,16 @@ OTHER_GHG_SPECIES = [
     "HFC-125", "HFC-134a", "HFC-143a", "HFC-152a", "HFC-227ea", "HFC-23",
     "HFC-236fa", "HFC-245fa", "HFC-32", "HFC-365mfc", "HFC-4310mee",
 ]
+# Forcing-chart category groupings for item 5 of dashboard-v2-wishlist.md.
+# "Equivalent effective stratospheric chlorine" is an input diagnostic that
+# feeds the Ozone forcing calculation, not itself a forcing series in
+# f.forcing -- deliberately excluded from every category below.
+AEROSOL_SPECIES = ["Aerosol-radiation interactions", "Aerosol-cloud interactions"]
+OTHER_ANTHRO_SPECIES = [
+    "Ozone", "Stratospheric water vapour", "Land use", "Irrigation",
+    "Light absorbing particles on snow and ice",
+]
+NATURAL_SPECIES = ["Solar", "Volcanic"]
 EMISSIONS_UNITS = {
     "CO2 FFI": "Gt CO2/yr",
     "CO2 AFOLU": "Gt CO2/yr",
@@ -407,23 +417,30 @@ def run_scenario(
     conc_n2o = f.concentration.sel(scenario=scenario, config="run", specie="N2O").values
 
     def forcing_of(specie):
-        return f.forcing.sel(scenario=scenario, config="run", specie=specie).values
+        sel = f.forcing.sel(scenario=scenario, config="run", specie=specie)
+        if isinstance(specie, list):
+            sel = sel.sum("specie")
+        return sel.values
 
     forcing_co2 = forcing_of("CO2")
-    forcing_ch4 = forcing_of("CH4")
-    forcing_n2o = forcing_of("N2O")
-    forcing_aerosol = forcing_of("Aerosol-radiation interactions") + forcing_of("Aerosol-cloud interactions")
-    forcing_other = forcing_total - forcing_co2 - forcing_ch4 - forcing_n2o - forcing_aerosol
+    forcing_other_ghg = forcing_of(OTHER_GHG_SPECIES)
+    forcing_aerosol = forcing_of(AEROSOL_SPECIES)
+    forcing_other_anthro = forcing_of(OTHER_ANTHRO_SPECIES)
+    forcing_natural = forcing_of(NATURAL_SPECIES)
+    assert np.allclose(
+        forcing_co2 + forcing_other_ghg + forcing_aerosol + forcing_other_anthro + forcing_natural,
+        forcing_total,
+    ), "5-category forcing breakdown does not sum to forcing_sum"
 
     result = {
         "years": years.tolist(),
         "temperature_anomaly": temp_anomaly.tolist(),
         "forcing_total": forcing_total.tolist(),
         "forcing_co2": forcing_co2.tolist(),
-        "forcing_ch4": forcing_ch4.tolist(),
-        "forcing_n2o": forcing_n2o.tolist(),
+        "forcing_other_ghg": forcing_other_ghg.tolist(),
         "forcing_aerosol": forcing_aerosol.tolist(),
-        "forcing_other": forcing_other.tolist(),
+        "forcing_other_anthro": forcing_other_anthro.tolist(),
+        "forcing_natural": forcing_natural.tolist(),
         "concentration_co2": conc_co2.tolist(),
         "concentration_ch4": conc_ch4.tolist(),
         "concentration_n2o": conc_n2o.tolist(),

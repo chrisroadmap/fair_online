@@ -259,10 +259,10 @@ function renderTemperatureChart(result) {
 function renderForcingChart(result) {
   const series = [
     ['forcing_co2', 'CO₂', COLORS.series1],
-    ['forcing_ch4', 'CH₄', COLORS.series2],
-    ['forcing_n2o', 'N₂O', COLORS.series3],
-    ['forcing_aerosol', 'Aerosols', COLORS.series4],
-    ['forcing_other', 'Other', COLORS.series5],
+    ['forcing_other_ghg', 'Other GHGs', COLORS.series2],
+    ['forcing_aerosol', 'Aerosols', COLORS.series3],
+    ['forcing_other_anthro', 'Other anthropogenic', COLORS.series4],
+    ['forcing_natural', 'Natural', COLORS.series5],
   ];
   const traces = series.map(([key, name, color]) => ({
     x: result.years, y: result[key].map((v) => Number(v.toFixed(3))),
