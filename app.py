@@ -51,7 +51,7 @@ def _parse_run_request(body):
     ecs = body.get("ecs")
     ecs = float(ecs) if ecs is not None else None
     ohu_scale = float(body.get("ocean_heat_uptake_scale", 1.0))
-    co2_scale = float(body.get("co2_forcing_scale", 1.0))
+    ghg_scale = float(body.get("ghg_forcing_scale", 1.0))
     aerosol_scale = float(body.get("aerosol_forcing_scale", 1.0))
     advanced = body.get("advanced")
     emissions_overrides = body.get("emissions_overrides") or {}
@@ -59,7 +59,7 @@ def _parse_run_request(body):
         scenario=scenario,
         ecs=ecs,
         ocean_heat_uptake_scale=ohu_scale,
-        co2_forcing_scale=co2_scale,
+        ghg_forcing_scale=ghg_scale,
         aerosol_forcing_scale=aerosol_scale,
         advanced=advanced,
         emissions_overrides=emissions_overrides,

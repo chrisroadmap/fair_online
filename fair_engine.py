@@ -106,6 +106,21 @@ SCENARIOS = {
 
 # Species users are allowed to hand-edit emissions trajectories for.
 EDITABLE_SPECIES = ["CO2 FFI", "CO2 AFOLU", "CH4", "N2O", "Sulfur"]
+# "Other greenhouse gases" grouping used by the ghg_forcing_scale slider,
+# matching the wishlist's item 5 category (CH4, N2O, and every halogenated
+# species) -- kept alongside CO2 here so a single forcing_scale slider covers
+# all well-mixed GHGs in one fill() call.
+OTHER_GHG_SPECIES = [
+    "CH4", "N2O",
+    "CFC-11", "CFC-12", "CFC-113", "CFC-114", "CFC-115",
+    "HCFC-22", "HCFC-141b", "HCFC-142b",
+    "CCl4", "CHCl3", "CH2Cl2", "CH3Cl", "CH3CCl3", "CH3Br",
+    "Halon-1211", "Halon-1301", "Halon-2402",
+    "CF4", "C2F6", "C3F8", "c-C4F8", "C4F10", "C5F12", "C6F14", "C7F16", "C8F18",
+    "NF3", "SF6", "SO2F2",
+    "HFC-125", "HFC-134a", "HFC-143a", "HFC-152a", "HFC-227ea", "HFC-23",
+    "HFC-236fa", "HFC-245fa", "HFC-32", "HFC-365mfc", "HFC-4310mee",
+]
 EMISSIONS_UNITS = {
     "CO2 FFI": "Gt CO2/yr",
     "CO2 AFOLU": "Gt CO2/yr",
@@ -263,7 +278,7 @@ def run_scenario(
     scenario,
     ecs=None,
     ocean_heat_uptake_scale=1.0,
-    co2_forcing_scale=1.0,
+    ghg_forcing_scale=1.0,
     aerosol_forcing_scale=1.0,
     advanced=None,
     emissions_overrides=None,
@@ -319,7 +334,7 @@ def run_scenario(
     fill(f.climate_configs["sigma_xi"], _CENTRAL_ROW["sigma_xi"], config="run")
     fill(f.climate_configs["stochastic_run"], False, config="run")
 
-    fill(f.species_configs["forcing_scale"], co2_forcing_scale, specie="CO2", config="run")
+    fill(f.species_configs["forcing_scale"], ghg_forcing_scale, specie=["CO2"] + OTHER_GHG_SPECIES, config="run")
     for aero_specie in ("Aerosol-radiation interactions", "Aerosol-cloud interactions"):
         base_scale = _CENTRAL_ROW.get(f"forcing_scale[{aero_specie}]", 1.0)
         fill(f.species_configs["forcing_scale"], base_scale * aerosol_forcing_scale, specie=aero_specie, config="run")

@@ -177,7 +177,7 @@ function gatherRequestBody() {
     scenario: document.getElementById('scenario-select').value,
     ocean_heat_uptake_scale: parseFloat(document.getElementById('ohu-slider').value),
     aerosol_forcing_scale: parseFloat(document.getElementById('aerosol-slider').value),
-    co2_forcing_scale: parseFloat(document.getElementById('co2-forcing-slider').value),
+    ghg_forcing_scale: parseFloat(document.getElementById('ghg-forcing-slider').value),
     emissions_overrides: gatherEmissionsOverrides(),
   };
   if (advancedMode) {
@@ -346,7 +346,7 @@ function resetAllControls() {
   document.getElementById('ecs-slider').value = CONFIG.climate_meta.central_ecs.toFixed(1);
   document.getElementById('ohu-slider').value = 1.0;
   document.getElementById('aerosol-slider').value = 1.0;
-  document.getElementById('co2-forcing-slider').value = 1.0;
+  document.getElementById('ghg-forcing-slider').value = 1.0;
   updateSliderBadges();
   resetAdvancedPanel();
   advancedMode = false;
@@ -364,11 +364,11 @@ function updateSliderBadges() {
   const aerosolRef = CONFIG ? CONFIG.aerosol_forcing_reference_wm2 : null;
   document.getElementById('aerosol-value').textContent =
     aerosolRef == null ? '—' : (aerosolScale * aerosolRef).toFixed(2) + ' W/m²';
-  document.getElementById('co2-forcing-value').textContent = parseFloat(document.getElementById('co2-forcing-slider').value).toFixed(2) + '×';
+  document.getElementById('ghg-forcing-value').textContent = parseFloat(document.getElementById('ghg-forcing-slider').value).toFixed(2) + '×';
 }
 
 function initEventListeners() {
-  ['ecs-slider', 'ohu-slider', 'aerosol-slider', 'co2-forcing-slider'].forEach((id) => {
+  ['ecs-slider', 'ohu-slider', 'aerosol-slider', 'ghg-forcing-slider'].forEach((id) => {
     document.getElementById(id).addEventListener('input', updateSliderBadges);
   });
 
