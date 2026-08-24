@@ -55,6 +55,7 @@ def _parse_run_request(body):
     aerosol_scale = float(body.get("aerosol_forcing_scale", 1.0))
     advanced = body.get("advanced")
     emissions_overrides = body.get("emissions_overrides") or {}
+    include_ensemble = bool(body.get("include_ensemble", False))
     return dict(
         scenario=scenario,
         ecs=ecs,
@@ -63,6 +64,7 @@ def _parse_run_request(body):
         aerosol_forcing_scale=aerosol_scale,
         advanced=advanced,
         emissions_overrides=emissions_overrides,
+        include_ensemble=include_ensemble,
     )
 
 
@@ -86,11 +88,14 @@ def api_download():
     except Exception as exc:  # noqa: BLE001
         return jsonify({"error": str(exc)}), 400
 
+    has_ensemble = "temperature_p5" in result
+
     buf = io.StringIO()
     writer = csv_module.writer(buf)
     header = [
         "year",
         "temperature_anomaly_C_rel_1850-1900",
+        *(["temperature_p5_C", "temperature_p95_C"] if has_ensemble else []),
         "forcing_total_Wm2",
         "forcing_co2_Wm2",
         "forcing_other_ghg_Wm2",
@@ -107,6 +112,7 @@ def api_download():
             [
                 year,
                 result["temperature_anomaly"][i],
+                *([result["temperature_p5"][i], result["temperature_p95"][i]] if has_ensemble else []),
                 result["forcing_total"][i],
                 result["forcing_co2"][i],
                 result["forcing_other_ghg"][i],

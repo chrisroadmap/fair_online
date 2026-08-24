@@ -20,6 +20,15 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 SPECIES_FILE = os.path.join(DATA_DIR, "species_configs_properties.csv")
 CENTRAL_CONFIG_FILE = os.path.join(DATA_DIR, "central_config.csv")
+# 41-member subsample of the real fair-calibrate v1.6.0 constrained posterior
+# (calibrated_constrained_parameters.csv, 841 members, Zenodo 10.5281/
+# zenodo.18828694), used for the temperature ensemble uncertainty band (item
+# 1 of dashboard-v2-wishlist.md). Member 1140683 (CENTRAL_CONFIG_FILE's
+# "central" row is an exact match to this member) is force-included, plus 40
+# more stride-sampled from the remaining 840 (stride 21) -- row order in the
+# source file has negligible correlation with climate response
+# (forcing_4co2), so stride sampling is a reproducible, unbiased subsample.
+ENSEMBLE_MEMBERS_FILE = os.path.join(DATA_DIR, "ensemble_members.csv")
 EMISSIONS_FILE = os.path.join(DATA_DIR, "emissions.csv")
 NATURAL_FORCING_FILE = os.path.join(DATA_DIR, "natural_forcing.csv")
 CLIMATE_META_FILE = os.path.join(DATA_DIR, "climate_meta.json")
@@ -148,6 +157,7 @@ with open(CLIMATE_META_FILE) as fh:
 # ---- module-level cached data (loaded once per process) ----
 _SPECIES, _PROPERTIES = read_properties(SPECIES_FILE)
 _CENTRAL_ROW = pd.read_csv(CENTRAL_CONFIG_FILE, index_col=0).loc["central"]
+_ENSEMBLE_DF = pd.read_csv(ENSEMBLE_MEMBERS_FILE, index_col=0)
 _EMISSIONS_DF = pd.read_csv(EMISSIONS_FILE)
 _EMISSIONS_DF.columns = [str(c) for c in _EMISSIONS_DF.columns]
 _EMIS_YEAR_COLS = [c for c in _EMISSIONS_DF.columns if c not in ("scenario", "region", "variable", "unit")]
@@ -284,6 +294,51 @@ def _apply_emissions_override(base_vals, control_points):
     return vals
 
 
+def _apply_config_row(f, row, config_name, climate=None):
+    """Apply one calibration-ensemble row's species_configs and
+    climate_configs values to a single named FAIR config.
+
+    `climate` overrides the row's own (kappa, capacity, epsilon,
+    forcing_4co2) -- used for the user-tunable "run" config, whose climate
+    response comes from the ecs/ocean_heat_uptake_scale sliders rather than
+    directly from `row`. Ensemble-member configs pass `climate=None` so each
+    member keeps its own native, uncalibrated-by-the-user climate response.
+    """
+    for col in row.index:
+        if "[" in col:
+            param_name, idx = col.split("[")
+            idx = idx[:-1]
+        else:
+            param_name, idx = col, None
+        if param_name in ("gamma_autocorrelation", "ocean_heat_capacity", "ocean_heat_transfer", "deep_ocean_efficacy", "sigma_eta", "sigma_xi", "forcing_4co2"):
+            continue  # handled below via the climate dict
+        if idx is not None and idx not in _SPECIES:
+            continue
+        try:
+            if idx is not None:
+                fill(f.species_configs[param_name], row[col], specie=idx, config=config_name)
+            else:
+                fill(f.species_configs[param_name], row[col], config=config_name)
+        except (KeyError, ValueError):
+            pass
+
+    if climate is None:
+        climate = {
+            "capacity": [row[f"ocean_heat_capacity[{i}]"] for i in range(3)],
+            "kappa": [row[f"ocean_heat_transfer[{i}]"] for i in range(3)],
+            "epsilon": row["deep_ocean_efficacy"],
+            "forcing_4co2": row["forcing_4co2"],
+        }
+    fill(f.climate_configs["ocean_heat_capacity"], climate["capacity"], config=config_name)
+    fill(f.climate_configs["ocean_heat_transfer"], climate["kappa"], config=config_name)
+    fill(f.climate_configs["deep_ocean_efficacy"], climate["epsilon"], config=config_name)
+    fill(f.climate_configs["forcing_4co2"], climate["forcing_4co2"], config=config_name)
+    fill(f.climate_configs["gamma_autocorrelation"], row["gamma_autocorrelation"], config=config_name)
+    fill(f.climate_configs["sigma_eta"], row["sigma_eta"], config=config_name)
+    fill(f.climate_configs["sigma_xi"], row["sigma_xi"], config=config_name)
+    fill(f.climate_configs["stochastic_run"], False, config=config_name)
+
+
 def run_scenario(
     scenario,
     ecs=None,
@@ -293,6 +348,7 @@ def run_scenario(
     advanced=None,
     emissions_overrides=None,
     year_end=YEAR_END,
+    include_ensemble=False,
 ):
     if scenario not in SCENARIOS:
         raise ValueError(f"Unknown scenario '{scenario}'")
@@ -300,10 +356,13 @@ def run_scenario(
 
     climate = climate_config_from_params(ecs=ecs, ocean_heat_uptake_scale=ocean_heat_uptake_scale, advanced=advanced)
 
+    member_configs = [f"ens_{member_id}" for member_id in _ENSEMBLE_DF.index] if include_ensemble else []
+    configs = ["run"] + member_configs
+
     f = FAIR(ch4_method="thornhill2021")
     f.define_time(YEAR_START, year_end, 1)
     f.define_scenarios([scenario])
-    f.define_configs(["run"])
+    f.define_configs(configs)
     f.define_species(_SPECIES, _PROPERTIES)
     f.allocate()
 
@@ -311,38 +370,21 @@ def run_scenario(
     # file that has sensible numeric values for every species, including the
     # iirf/lifetime-feedback terms the fair-calibrate metadata file leaves
     # blank), re-indexed onto our full v1.6.0 species list. The
-    # fair-calibrate central-ensemble-member values applied next override
-    # CO2's carbon-cycle feedback, aerosol radiative efficiencies, and the
-    # climate response parameters on top of this baseline.
+    # fair-calibrate ensemble-member values applied next override CO2's
+    # carbon-cycle feedback, aerosol radiative efficiencies, and the climate
+    # response parameters on top of this baseline, per config.
     f.fill_species_configs(SPECIES_DEFAULTS_FILE)
-    # apply the central-ensemble-member species-level params (radiative
-    # efficiencies, iirf, aci params etc.) to our single "run" config
-    for col in _CENTRAL_ROW.index:
-        if "[" in col:
-            param_name, idx = col.split("[")
-            idx = idx[:-1]
-        else:
-            param_name, idx = col, None
-        if param_name in ("gamma_autocorrelation", "ocean_heat_capacity", "ocean_heat_transfer", "deep_ocean_efficacy", "sigma_eta", "sigma_xi", "forcing_4co2"):
-            continue  # handled below via climate dict
-        if idx is not None and idx not in _SPECIES:
-            continue
-        try:
-            if idx is not None:
-                fill(f.species_configs[param_name], _CENTRAL_ROW[col], specie=idx, config="run")
-            else:
-                fill(f.species_configs[param_name], _CENTRAL_ROW[col], config="run")
-        except (KeyError, ValueError):
-            pass
-
-    fill(f.climate_configs["ocean_heat_capacity"], climate["capacity"], config="run")
-    fill(f.climate_configs["ocean_heat_transfer"], climate["kappa"], config="run")
-    fill(f.climate_configs["deep_ocean_efficacy"], climate["epsilon"], config="run")
-    fill(f.climate_configs["forcing_4co2"], climate["forcing_4co2"], config="run")
-    fill(f.climate_configs["gamma_autocorrelation"], _CENTRAL_ROW["gamma_autocorrelation"], config="run")
-    fill(f.climate_configs["sigma_eta"], _CENTRAL_ROW["sigma_eta"], config="run")
-    fill(f.climate_configs["sigma_xi"], _CENTRAL_ROW["sigma_xi"], config="run")
-    fill(f.climate_configs["stochastic_run"], False, config="run")
+    # Central "run" config: fair-calibrate's central-member species-level
+    # params, with climate response coming from the user's ecs/
+    # ocean_heat_uptake_scale/advanced sliders rather than directly from
+    # _CENTRAL_ROW.
+    _apply_config_row(f, _CENTRAL_ROW, "run", climate=climate)
+    # Ensemble-member configs (only when include_ensemble=True): each
+    # member's own native parameters, unmodified by the user's sliders --
+    # they represent the real fair-calibrate structural/parametric
+    # uncertainty, not "what if" exploration of the central estimate.
+    for member_config, (_, row) in zip(member_configs, _ENSEMBLE_DF.iterrows()):
+        _apply_config_row(f, row, member_config)
 
     fill(f.species_configs["forcing_scale"], ghg_forcing_scale, specie=["CO2"] + OTHER_GHG_SPECIES, config="run")
     for aero_specie in ("Aerosol-radiation interactions", "Aerosol-cloud interactions"):
@@ -392,12 +434,15 @@ def run_scenario(
     # boundary condition, or its forward integration is undefined (NaN) from
     # the very first step. Species without a concentration state (aerosols,
     # forcing-driven categories) have baseline_concentration == NaN and are
-    # correctly skipped.
-    baseline_conc = f.species_configs["baseline_concentration"].sel(config="run")
-    for specie in _SPECIES:
-        val = float(baseline_conc.sel(specie=specie).values)
-        if not np.isnan(val):
-            initialise(f.concentration, val, specie=specie)
+    # correctly skipped. baseline_concentration is itself a per-config
+    # calibrated value (e.g. pre-industrial CO2 varies member to member), so
+    # this must be set per config, not just once from "run" and broadcast.
+    for config_name in configs:
+        baseline_conc = f.species_configs["baseline_concentration"].sel(config=config_name)
+        for specie in _SPECIES:
+            val = float(baseline_conc.sel(specie=specie).values)
+            if not np.isnan(val):
+                initialise(f.concentration, val, specie=specie, config=config_name)
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
@@ -432,10 +477,22 @@ def run_scenario(
         forcing_total,
     ), "5-category forcing breakdown does not sum to forcing_sum"
 
+    temperature_p5 = temperature_p95 = None
+    if include_ensemble:
+        # Uncertainty band covers temperature only (per the wishlist's
+        # explicit scope) -- each member's anomaly is relative to its own
+        # 1850-1900 mean, matching how the central "run" anomaly is computed.
+        member_temp = f.temperature.sel(scenario=scenario, config=member_configs, layer=0)
+        member_baseline = member_temp.sel(timebounds=slice(1850, 1900)).mean("timebounds")
+        member_anomaly = member_temp - member_baseline
+        temperature_p5 = member_anomaly.quantile(0.05, dim="config").values.tolist()
+        temperature_p95 = member_anomaly.quantile(0.95, dim="config").values.tolist()
+
     result = {
         "years": years.tolist(),
         "temperature_anomaly": temp_anomaly.tolist(),
         "forcing_total": forcing_total.tolist(),
+        **({"temperature_p5": temperature_p5, "temperature_p95": temperature_p95} if include_ensemble else {}),
         "forcing_co2": forcing_co2.tolist(),
         "forcing_other_ghg": forcing_other_ghg.tolist(),
         "forcing_aerosol": forcing_aerosol.tolist(),
