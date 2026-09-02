@@ -177,7 +177,7 @@ function gatherRequestBody() {
     scenario: document.getElementById('scenario-select').value,
     ocean_heat_uptake_scale: parseFloat(document.getElementById('ohu-slider').value),
     aerosol_forcing_scale: parseFloat(document.getElementById('aerosol-slider').value),
-    co2_forcing_scale: parseFloat(document.getElementById('co2-forcing-slider').value),
+    ghg_forcing_scale: parseFloat(document.getElementById('ghg-forcing-slider').value),
     emissions_overrides: gatherEmissionsOverrides(),
   };
   if (advancedMode) {
@@ -233,15 +233,26 @@ function renderAll(result) {
 }
 
 function renderTemperatureChart(result) {
-  const traces = [{
+  const traces = [];
+  traces.push({
+    x: result.years, y: result.temperature_p95.map((v) => Number(v.toFixed(3))),
+    type: 'scatter', mode: 'lines', name: '95th percentile',
+    line: { width: 0 }, showlegend: false, hoverinfo: 'skip',
+  });
+  traces.push({
+    x: result.years, y: result.temperature_p5.map((v) => Number(v.toFixed(3))),
+    type: 'scatter', mode: 'lines', name: '5th–95th percentile (ensemble)',
+    line: { width: 0 }, fill: 'tonexty', fillcolor: COLORS.series1 + '33',
+  });
+  traces.push({
     x: result.years, y: result.temperature_anomaly.map((v) => Number(v.toFixed(3))),
-    type: 'scatter', mode: 'lines', name: 'This run',
+    type: 'scatter', mode: 'lines', name: 'Ensemble median',
     line: { color: COLORS.series1, width: 2 },
-  }];
+  });
   if (comparisonResult) {
     traces.push({
       x: comparisonResult.years, y: comparisonResult.temperature_anomaly.map((v) => Number(v.toFixed(3))),
-      type: 'scatter', mode: 'lines', name: 'Previous run',
+      type: 'scatter', mode: 'lines', name: 'Previous median',
       line: { color: COLORS.muted, width: 2, dash: 'dash' },
     });
   }
@@ -259,10 +270,10 @@ function renderTemperatureChart(result) {
 function renderForcingChart(result) {
   const series = [
     ['forcing_co2', 'CO₂', COLORS.series1],
-    ['forcing_ch4', 'CH₄', COLORS.series2],
-    ['forcing_n2o', 'N₂O', COLORS.series3],
-    ['forcing_aerosol', 'Aerosols', COLORS.series4],
-    ['forcing_other', 'Other', COLORS.series5],
+    ['forcing_other_ghg', 'Other GHGs', COLORS.series2],
+    ['forcing_aerosol', 'Aerosols', COLORS.series3],
+    ['forcing_other_anthro', 'Other anthropogenic', COLORS.series4],
+    ['forcing_natural', 'Natural', COLORS.series5],
   ];
   const traces = series.map(([key, name, color]) => ({
     x: result.years, y: result[key].map((v) => Number(v.toFixed(3))),
@@ -346,7 +357,7 @@ function resetAllControls() {
   document.getElementById('ecs-slider').value = CONFIG.climate_meta.central_ecs.toFixed(1);
   document.getElementById('ohu-slider').value = 1.0;
   document.getElementById('aerosol-slider').value = 1.0;
-  document.getElementById('co2-forcing-slider').value = 1.0;
+  document.getElementById('ghg-forcing-slider').value = 1.0;
   updateSliderBadges();
   resetAdvancedPanel();
   advancedMode = false;
@@ -360,12 +371,15 @@ function resetAllControls() {
 function updateSliderBadges() {
   document.getElementById('ecs-value').textContent = parseFloat(document.getElementById('ecs-slider').value).toFixed(1) + '°C';
   document.getElementById('ohu-value').textContent = parseFloat(document.getElementById('ohu-slider').value).toFixed(2) + '×';
-  document.getElementById('aerosol-value').textContent = parseFloat(document.getElementById('aerosol-slider').value).toFixed(2) + '×';
-  document.getElementById('co2-forcing-value').textContent = parseFloat(document.getElementById('co2-forcing-slider').value).toFixed(2) + '×';
+  const aerosolScale = parseFloat(document.getElementById('aerosol-slider').value);
+  const aerosolRef = CONFIG ? CONFIG.aerosol_forcing_reference_wm2 : null;
+  document.getElementById('aerosol-value').textContent =
+    aerosolRef == null ? '—' : (aerosolScale * aerosolRef).toFixed(2) + ' W/m²';
+  document.getElementById('ghg-forcing-value').textContent = parseFloat(document.getElementById('ghg-forcing-slider').value).toFixed(2) + '×';
 }
 
 function initEventListeners() {
-  ['ecs-slider', 'ohu-slider', 'aerosol-slider', 'co2-forcing-slider'].forEach((id) => {
+  ['ecs-slider', 'ohu-slider', 'aerosol-slider', 'ghg-forcing-slider'].forEach((id) => {
     document.getElementById(id).addEventListener('input', updateSliderBadges);
   });
 

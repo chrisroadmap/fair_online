@@ -41,6 +41,7 @@ def api_config():
                 "forcing_4co2": fe._BASE_F4,
             },
             "observed": fe.observed_data(),
+            "aerosol_forcing_reference_wm2": fe.aerosol_forcing_reference_wm2(),
         }
     )
 
@@ -50,7 +51,7 @@ def _parse_run_request(body):
     ecs = body.get("ecs")
     ecs = float(ecs) if ecs is not None else None
     ohu_scale = float(body.get("ocean_heat_uptake_scale", 1.0))
-    co2_scale = float(body.get("co2_forcing_scale", 1.0))
+    ghg_scale = float(body.get("ghg_forcing_scale", 1.0))
     aerosol_scale = float(body.get("aerosol_forcing_scale", 1.0))
     advanced = body.get("advanced")
     emissions_overrides = body.get("emissions_overrides") or {}
@@ -58,7 +59,7 @@ def _parse_run_request(body):
         scenario=scenario,
         ecs=ecs,
         ocean_heat_uptake_scale=ohu_scale,
-        co2_forcing_scale=co2_scale,
+        ghg_forcing_scale=ghg_scale,
         aerosol_forcing_scale=aerosol_scale,
         advanced=advanced,
         emissions_overrides=emissions_overrides,
@@ -89,13 +90,15 @@ def api_download():
     writer = csv_module.writer(buf)
     header = [
         "year",
-        "temperature_anomaly_C_rel_1850-1900",
+        "temperature_anomaly_C_rel_1850-1900_ensemble_median",
+        "temperature_p5_C",
+        "temperature_p95_C",
         "forcing_total_Wm2",
         "forcing_co2_Wm2",
-        "forcing_ch4_Wm2",
-        "forcing_n2o_Wm2",
+        "forcing_other_ghg_Wm2",
         "forcing_aerosol_Wm2",
-        "forcing_other_Wm2",
+        "forcing_other_anthro_Wm2",
+        "forcing_natural_Wm2",
         "co2_concentration_ppm",
         "ch4_concentration_ppb",
         "n2o_concentration_ppb",
@@ -106,12 +109,14 @@ def api_download():
             [
                 year,
                 result["temperature_anomaly"][i],
+                result["temperature_p5"][i],
+                result["temperature_p95"][i],
                 result["forcing_total"][i],
                 result["forcing_co2"][i],
-                result["forcing_ch4"][i],
-                result["forcing_n2o"][i],
+                result["forcing_other_ghg"][i],
                 result["forcing_aerosol"][i],
-                result["forcing_other"][i],
+                result["forcing_other_anthro"][i],
+                result["forcing_natural"][i],
                 result["concentration_co2"][i],
                 result["concentration_ch4"][i],
                 result["concentration_n2o"][i],
