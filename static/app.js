@@ -179,7 +179,6 @@ function gatherRequestBody() {
     aerosol_forcing_scale: parseFloat(document.getElementById('aerosol-slider').value),
     ghg_forcing_scale: parseFloat(document.getElementById('ghg-forcing-slider').value),
     emissions_overrides: gatherEmissionsOverrides(),
-    include_ensemble: document.getElementById('ensemble-toggle-chk').checked,
   };
   if (advancedMode) {
     body.advanced = readAdvancedPanel();
@@ -235,27 +234,25 @@ function renderAll(result) {
 
 function renderTemperatureChart(result) {
   const traces = [];
-  if (result.temperature_p5 && result.temperature_p95) {
-    traces.push({
-      x: result.years, y: result.temperature_p95.map((v) => Number(v.toFixed(3))),
-      type: 'scatter', mode: 'lines', name: '95th percentile',
-      line: { width: 0 }, showlegend: false, hoverinfo: 'skip',
-    });
-    traces.push({
-      x: result.years, y: result.temperature_p5.map((v) => Number(v.toFixed(3))),
-      type: 'scatter', mode: 'lines', name: '5th–95th percentile (ensemble)',
-      line: { width: 0 }, fill: 'tonexty', fillcolor: COLORS.series1 + '33',
-    });
-  }
+  traces.push({
+    x: result.years, y: result.temperature_p95.map((v) => Number(v.toFixed(3))),
+    type: 'scatter', mode: 'lines', name: '95th percentile',
+    line: { width: 0 }, showlegend: false, hoverinfo: 'skip',
+  });
+  traces.push({
+    x: result.years, y: result.temperature_p5.map((v) => Number(v.toFixed(3))),
+    type: 'scatter', mode: 'lines', name: '5th–95th percentile (ensemble)',
+    line: { width: 0 }, fill: 'tonexty', fillcolor: COLORS.series1 + '33',
+  });
   traces.push({
     x: result.years, y: result.temperature_anomaly.map((v) => Number(v.toFixed(3))),
-    type: 'scatter', mode: 'lines', name: 'This run',
+    type: 'scatter', mode: 'lines', name: 'Ensemble median',
     line: { color: COLORS.series1, width: 2 },
   });
   if (comparisonResult) {
     traces.push({
       x: comparisonResult.years, y: comparisonResult.temperature_anomaly.map((v) => Number(v.toFixed(3))),
-      type: 'scatter', mode: 'lines', name: 'Previous run',
+      type: 'scatter', mode: 'lines', name: 'Previous median',
       line: { color: COLORS.muted, width: 2, dash: 'dash' },
     });
   }
@@ -361,7 +358,6 @@ function resetAllControls() {
   document.getElementById('ohu-slider').value = 1.0;
   document.getElementById('aerosol-slider').value = 1.0;
   document.getElementById('ghg-forcing-slider').value = 1.0;
-  document.getElementById('ensemble-toggle-chk').checked = false;
   updateSliderBadges();
   resetAdvancedPanel();
   advancedMode = false;

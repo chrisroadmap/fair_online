@@ -25,9 +25,14 @@ CENTRAL_CONFIG_FILE = os.path.join(DATA_DIR, "central_config.csv")
 # zenodo.18828694), used for the temperature ensemble uncertainty band (item
 # 1 of dashboard-v2-wishlist.md). Member 1140683 (CENTRAL_CONFIG_FILE's
 # "central" row is an exact match to this member) is force-included, plus 40
-# more stride-sampled from the remaining 840 (stride 21) -- row order in the
-# source file has negligible correlation with climate response
-# (forcing_4co2), so stride sampling is a reproducible, unbiased subsample.
+# more chosen by random draw (numpy Generator, seed 788525, applied to the
+# 840 remaining member IDs) -- an earlier stride-21 draw looked
+# representative on forcing_4co2 alone but, checked against the full
+# posterior's ECS/TCR after the fact, was biased ~5% cool on median ECS and
+# ~24% too narrow on ECS spread (both feed the temperature band directly).
+# This seed was picked (from 2000 candidates) as the closest match to the
+# full 841-member posterior's ECS and TCR median+spread simultaneously --
+# resulting median/std within 1% of the true posterior on both ECS and TCR.
 ENSEMBLE_MEMBERS_FILE = os.path.join(DATA_DIR, "ensemble_members.csv")
 EMISSIONS_FILE = os.path.join(DATA_DIR, "emissions.csv")
 NATURAL_FORCING_FILE = os.path.join(DATA_DIR, "natural_forcing.csv")
@@ -172,6 +177,7 @@ _BASE_C = [_CENTRAL_ROW[f"ocean_heat_capacity[{i}]"] for i in range(3)]
 _BASE_K = [_CENTRAL_ROW[f"ocean_heat_transfer[{i}]"] for i in range(3)]
 _BASE_EPS = _CENTRAL_ROW["deep_ocean_efficacy"]
 _BASE_F4 = _CENTRAL_ROW["forcing_4co2"]
+_BASE_ECS = CLIMATE_META["central_ecs"]
 
 _OBSERVED_GMST_DF = pd.read_csv(OBSERVED_GMST_FILE)
 _OBSERVED_GHG_DF = pd.read_csv(OBSERVED_GHG_FILE)
@@ -214,17 +220,63 @@ def _emergent_ecs_tcr(kappa, capacity, epsilon, forcing_4co2):
     return float(ebm.ecs), float(ebm.tcr)
 
 
+def _solve_kappa0_scale_for_ecs(kappa1, kappa2, capacity, epsilon, forcing_4co2, target_ecs):
+    """Return the scale factor on kappa[0] that gives `target_ecs`, holding
+    kappa[1], kappa[2], capacity and epsilon fixed at the given values.
+    Shared by the central "run" config (`solve_kappa0_for_ecs`, scaling from
+    the selected central member's own kappa[0]) and, per ensemble member, by
+    `_apply_ensemble_configs_responsive`.
+    """
+
+    def f(scale):
+        ecs, _ = _emergent_ecs_tcr([_BASE_K[0] * scale, kappa1, kappa2], capacity, epsilon, forcing_4co2)
+        return ecs - target_ecs
+
+    return brentq(f, 0.05, 12, xtol=1e-6)
+
+
 def solve_kappa0_for_ecs(target_ecs):
     """Return the scale factor on the base kappa[0] (from the selected
     central ensemble member) that gives the requested equilibrium climate
     sensitivity, holding kappa[1], kappa[2], ocean heat capacities and
     deep-ocean efficacy fixed at that member's values."""
+    return _solve_kappa0_scale_for_ecs(_BASE_K[1], _BASE_K[2], _BASE_C, _BASE_EPS, _BASE_F4, target_ecs)
+
+
+def _member_kappa0_scale_for_ecs(row, target_ecs):
+    """Like `solve_kappa0_for_ecs`, but scales from one ensemble member's own
+    native kappa[0] (via that member's own kappa[1,2]/capacity/epsilon/
+    forcing_4co2 -- `_BASE_K[0]` above is a fixed reference the scale factor
+    multiplies onto, so use the member's own kappa[0] instead)."""
+    kappa1 = row["ocean_heat_transfer[1]"]
+    kappa2 = row["ocean_heat_transfer[2]"]
+    capacity = [row[f"ocean_heat_capacity[{i}]"] for i in range(3)]
+    epsilon = row["deep_ocean_efficacy"]
+    forcing_4co2 = row["forcing_4co2"]
 
     def f(scale):
-        ecs, _ = _emergent_ecs_tcr([_BASE_K[0] * scale, _BASE_K[1], _BASE_K[2]], _BASE_C, _BASE_EPS, _BASE_F4)
+        ecs, _ = _emergent_ecs_tcr([row["ocean_heat_transfer[0]"] * scale, kappa1, kappa2], capacity, epsilon, forcing_4co2)
         return ecs - target_ecs
 
     return brentq(f, 0.05, 12, xtol=1e-6)
+
+
+# Each member's own native (unscaled) emergent ECS, precomputed once at
+# import time from its own kappa/capacity/epsilon/forcing_4co2 -- used as
+# the reference point for the relative ECS rescale in
+# _apply_ensemble_configs_responsive (member_target_ecs = member_native_ecs
+# * (user_ecs / _BASE_ECS), preserving each member's relative distance from
+# the ensemble's central tendency rather than pinning every member to the
+# same absolute ECS).
+_ENSEMBLE_NATIVE_ECS = np.array([
+    _emergent_ecs_tcr(
+        [row["ocean_heat_transfer[0]"], row["ocean_heat_transfer[1]"], row["ocean_heat_transfer[2]"]],
+        [row[f"ocean_heat_capacity[{i}]"] for i in range(3)],
+        row["deep_ocean_efficacy"],
+        row["forcing_4co2"],
+    )[0]
+    for _, row in _ENSEMBLE_DF.iterrows()
+])
 
 
 def climate_config_from_params(ecs=None, ocean_heat_uptake_scale=1.0, advanced=None):
@@ -397,6 +449,57 @@ def _apply_ensemble_configs(f, ensemble_df, member_configs):
     fill(f.climate_configs["stochastic_run"], False, config=member_configs)
 
 
+def _apply_ensemble_configs_responsive(f, ensemble_df, member_configs, ecs, ocean_heat_uptake_scale, ghg_forcing_scale, aerosol_forcing_scale):
+    """Like `_apply_ensemble_configs`, but rescales each member's climate
+    response and forcing strength by the same relative sliders the user
+    applied to the central "run" config, instead of leaving every member at
+    its untouched native calibration -- so the temperature ensemble band
+    moves and reshapes with the sliders rather than staying fixed. Only
+    called for the simple-slider path (`advanced` is None); advanced mode's
+    raw kappa/capacity/epsilon/forcing_4co2 entry has no principled way to
+    map onto a per-member relative rescale, so the ensemble stays native
+    there (see `_apply_ensemble_configs`).
+
+    - ECS: each member's own native ECS is scaled by the same ratio the
+      user's slider applies to the central estimate (`ecs / _BASE_ECS`),
+      preserving each member's relative distance from the pack rather than
+      pinning every member to one absolute ECS. Requires one `brentq` solve
+      per member (~0.3ms each, ~13ms total for 41 members) since each
+      member's kappa[0]->ECS mapping depends on its own kappa[1,2]/capacity/
+      epsilon/forcing_4co2.
+    - Ocean heat uptake: kappa[1]/kappa[2] scaled directly (mirrors "run" --
+      already a relative multiply there, no solving needed).
+    - GHG/aerosol forcing scale: each member's own native forcing_scale is
+      multiplied by the slider (preserves inter-member calibration spread on
+      this term). This intentionally differs from "run", which overwrites
+      forcing_scale with the slider value outright rather than multiplying
+      -- replicating that overwrite here would collapse the ensemble's
+      forcing_scale spread to zero on every request (ghg_forcing_scale/
+      aerosol_forcing_scale default to 1.0 and are always sent, never "off").
+    """
+    _apply_ensemble_configs(f, ensemble_df, member_configs)
+
+    ecs_ratio = ecs / _BASE_ECS
+    member_target_ecs = _ENSEMBLE_NATIVE_ECS * ecs_ratio
+    kappa0_scales = np.array([
+        _member_kappa0_scale_for_ecs(row, target_ecs)
+        for (_, row), target_ecs in zip(ensemble_df.iterrows(), member_target_ecs)
+    ])
+    new_kappa0 = ensemble_df["ocean_heat_transfer[0]"].to_numpy() * kappa0_scales
+    new_kappa12 = ensemble_df[["ocean_heat_transfer[1]", "ocean_heat_transfer[2]"]].to_numpy() * ocean_heat_uptake_scale
+    new_kappa = np.column_stack([new_kappa0, new_kappa12])
+    fill(f.climate_configs["ocean_heat_transfer"], new_kappa, config=member_configs)
+
+    for specie in ["CO2"] + OTHER_GHG_SPECIES:
+        native = ensemble_df[f"forcing_scale[{specie}]"].to_numpy()
+        fill(f.species_configs["forcing_scale"], native * ghg_forcing_scale, specie=specie, config=member_configs)
+    for aero_specie in AEROSOL_SPECIES:
+        # No calibrated forcing_scale column exists for aerosol species (same
+        # as the central row -- see run_scenario's `.get(..., 1.0)` fallback),
+        # so every member's native base scale is 1.0, matching "run".
+        fill(f.species_configs["forcing_scale"], aerosol_forcing_scale, specie=aero_specie, config=member_configs)
+
+
 def run_scenario(
     scenario,
     ecs=None,
@@ -406,7 +509,6 @@ def run_scenario(
     advanced=None,
     emissions_overrides=None,
     year_end=YEAR_END,
-    include_ensemble=False,
 ):
     if scenario not in SCENARIOS:
         raise ValueError(f"Unknown scenario '{scenario}'")
@@ -414,7 +516,13 @@ def run_scenario(
 
     climate = climate_config_from_params(ecs=ecs, ocean_heat_uptake_scale=ocean_heat_uptake_scale, advanced=advanced)
 
-    member_configs = [f"ens_{member_id}" for member_id in _ENSEMBLE_DF.index] if include_ensemble else []
+    # The 41-member ensemble always runs -- there is no single-run mode. The
+    # displayed central temperature line is the ensemble median (see below),
+    # not "run"'s own trajectory; "run" itself is still computed and used
+    # for forcing/concentration/emissions/ecs-tcr, which stay single-config
+    # per the wishlist's original scope ("other variables do not need
+    # uncertainties").
+    member_configs = [f"ens_{member_id}" for member_id in _ENSEMBLE_DF.index]
     configs = ["run"] + member_configs
 
     f = FAIR(ch4_method="thornhill2021")
@@ -437,14 +545,29 @@ def run_scenario(
     # ocean_heat_uptake_scale/advanced sliders rather than directly from
     # _CENTRAL_ROW.
     _apply_config_row(f, _CENTRAL_ROW, "run", climate=climate)
-    # Ensemble-member configs (only when include_ensemble=True): each
-    # member's own native parameters, unmodified by the user's sliders --
-    # they represent the real fair-calibrate structural/parametric
-    # uncertainty, not "what if" exploration of the central estimate.
-    # Batched across all members at once (see _apply_ensemble_configs) --
-    # looping _apply_config_row per row was the dominant cost of an
-    # ensemble run (thousands of single-value xarray .loc[] assignments).
-    if include_ensemble:
+    # Ensemble-member configs. Batched across all members at once (see
+    # _apply_ensemble_configs) -- looping _apply_config_row per row was the
+    # dominant cost of an ensemble run (thousands of single-value xarray
+    # .loc[] assignments).
+    #
+    # In the simple-slider path (advanced is None, ecs given), each member's
+    # climate response and forcing strength is rescaled by the same relative
+    # factors applied to "run", so the ensemble (and its median) moves with
+    # the sliders instead of staying fixed (see
+    # _apply_ensemble_configs_responsive). In advanced mode there's no
+    # principled per-member rescale for raw kappa/capacity/epsilon entry, so
+    # members keep their native, untouched calibration -- real
+    # fair-calibrate structural/parametric uncertainty around whatever the
+    # advanced panel's climate response currently produces.
+    if advanced is None and ecs is not None:
+        _apply_ensemble_configs_responsive(
+            f, _ENSEMBLE_DF, member_configs,
+            ecs=climate["ecs"],
+            ocean_heat_uptake_scale=ocean_heat_uptake_scale,
+            ghg_forcing_scale=ghg_forcing_scale,
+            aerosol_forcing_scale=aerosol_forcing_scale,
+        )
+    else:
         _apply_ensemble_configs(f, _ENSEMBLE_DF, member_configs)
 
     fill(f.species_configs["forcing_scale"], ghg_forcing_scale, specie=["CO2"] + OTHER_GHG_SPECIES, config="run")
@@ -512,10 +635,6 @@ def run_scenario(
     f.run(progress=False)
 
     years = f.timebounds
-    baseline_mask = (years >= 1850) & (years <= 1900)
-    temperature = f.temperature.sel(scenario=scenario, config="run", layer=0).values
-    baseline = temperature[baseline_mask].mean()
-    temp_anomaly = temperature - baseline
 
     forcing_total = f.forcing_sum.sel(scenario=scenario, config="run").values
     conc_co2 = f.concentration.sel(scenario=scenario, config="run", specie="CO2").values
@@ -538,22 +657,25 @@ def run_scenario(
         forcing_total,
     ), "5-category forcing breakdown does not sum to forcing_sum"
 
-    temperature_p5 = temperature_p95 = None
-    if include_ensemble:
-        # Uncertainty band covers temperature only (per the wishlist's
-        # explicit scope) -- each member's anomaly is relative to its own
-        # 1850-1900 mean, matching how the central "run" anomaly is computed.
-        member_temp = f.temperature.sel(scenario=scenario, config=member_configs, layer=0)
-        member_baseline = member_temp.sel(timebounds=slice(1850, 1900)).mean("timebounds")
-        member_anomaly = member_temp - member_baseline
-        temperature_p5 = member_anomaly.quantile(0.05, dim="config").values.tolist()
-        temperature_p95 = member_anomaly.quantile(0.95, dim="config").values.tolist()
+    # Central temperature line is the ensemble median, not "run"'s own
+    # trajectory -- there is no single-run temperature mode. Each member's
+    # anomaly is relative to its own 1850-1900 mean, matching the pre-median
+    # convention used elsewhere in this app. Uncertainty band (p5/p95)
+    # covers temperature only, per the wishlist's original scope; forcing
+    # and concentration charts stay single-config ("run").
+    member_temp = f.temperature.sel(scenario=scenario, config=member_configs, layer=0)
+    member_baseline = member_temp.sel(timebounds=slice(1850, 1900)).mean("timebounds")
+    member_anomaly = member_temp - member_baseline
+    temp_anomaly = member_anomaly.quantile(0.50, dim="config").values
+    temperature_p5 = member_anomaly.quantile(0.05, dim="config").values.tolist()
+    temperature_p95 = member_anomaly.quantile(0.95, dim="config").values.tolist()
 
     result = {
         "years": years.tolist(),
         "temperature_anomaly": temp_anomaly.tolist(),
         "forcing_total": forcing_total.tolist(),
-        **({"temperature_p5": temperature_p5, "temperature_p95": temperature_p95} if include_ensemble else {}),
+        "temperature_p5": temperature_p5,
+        "temperature_p95": temperature_p95,
         "forcing_co2": forcing_co2.tolist(),
         "forcing_other_ghg": forcing_other_ghg.tolist(),
         "forcing_aerosol": forcing_aerosol.tolist(),
