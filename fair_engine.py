@@ -303,6 +303,12 @@ def _apply_emissions_override(base_vals, control_points):
     return vals
 
 
+_CLIMATE_ROW_PARAMS = {
+    "gamma_autocorrelation", "ocean_heat_capacity", "ocean_heat_transfer",
+    "deep_ocean_efficacy", "sigma_eta", "sigma_xi", "forcing_4co2",
+}
+
+
 def _apply_config_row(f, row, config_name, climate=None):
     """Apply one calibration-ensemble row's species_configs and
     climate_configs values to a single named FAIR config.
@@ -312,6 +318,10 @@ def _apply_config_row(f, row, config_name, climate=None):
     response comes from the ecs/ocean_heat_uptake_scale sliders rather than
     directly from `row`. Ensemble-member configs pass `climate=None` so each
     member keeps its own native, uncalibrated-by-the-user climate response.
+
+    Single-config only -- for the ensemble (many rows, one call each) use
+    `_apply_ensemble_configs` instead, which batches every row into one
+    `fill()` per parameter rather than one per (row, parameter) pair.
     """
     for col in row.index:
         if "[" in col:
@@ -319,7 +329,7 @@ def _apply_config_row(f, row, config_name, climate=None):
             idx = idx[:-1]
         else:
             param_name, idx = col, None
-        if param_name in ("gamma_autocorrelation", "ocean_heat_capacity", "ocean_heat_transfer", "deep_ocean_efficacy", "sigma_eta", "sigma_xi", "forcing_4co2"):
+        if param_name in _CLIMATE_ROW_PARAMS:
             continue  # handled below via the climate dict
         if idx is not None and idx not in _SPECIES:
             continue
@@ -346,6 +356,45 @@ def _apply_config_row(f, row, config_name, climate=None):
     fill(f.climate_configs["sigma_eta"], row["sigma_eta"], config=config_name)
     fill(f.climate_configs["sigma_xi"], row["sigma_xi"], config=config_name)
     fill(f.climate_configs["stochastic_run"], False, config=config_name)
+
+
+def _apply_ensemble_configs(f, ensemble_df, member_configs):
+    """Vectorized equivalent of calling `_apply_config_row` once per row of
+    `ensemble_df`: one `fill()` per species/climate parameter across *all*
+    member configs at once, instead of one `fill()` per (member, parameter)
+    pair. Each `fill()` is an xarray label-based `.loc[]` assignment with
+    per-call overhead that dominates when called thousands of times (41
+    members x ~90 columns); batching cuts that to ~90 calls total.
+    """
+    for col in ensemble_df.columns:
+        if "[" in col:
+            param_name, idx = col.split("[")
+            idx = idx[:-1]
+        else:
+            param_name, idx = col, None
+        if param_name in _CLIMATE_ROW_PARAMS:
+            continue  # handled below via climate_configs
+        if idx is not None and idx not in _SPECIES:
+            continue
+        values = ensemble_df[col].to_numpy()
+        try:
+            if idx is not None:
+                fill(f.species_configs[param_name], values, specie=idx, config=member_configs)
+            else:
+                fill(f.species_configs[param_name], values, config=member_configs)
+        except (KeyError, ValueError):
+            pass
+
+    capacity = ensemble_df[[f"ocean_heat_capacity[{i}]" for i in range(3)]].to_numpy()
+    kappa = ensemble_df[[f"ocean_heat_transfer[{i}]" for i in range(3)]].to_numpy()
+    fill(f.climate_configs["ocean_heat_capacity"], capacity, config=member_configs)
+    fill(f.climate_configs["ocean_heat_transfer"], kappa, config=member_configs)
+    fill(f.climate_configs["deep_ocean_efficacy"], ensemble_df["deep_ocean_efficacy"].to_numpy(), config=member_configs)
+    fill(f.climate_configs["forcing_4co2"], ensemble_df["forcing_4co2"].to_numpy(), config=member_configs)
+    fill(f.climate_configs["gamma_autocorrelation"], ensemble_df["gamma_autocorrelation"].to_numpy(), config=member_configs)
+    fill(f.climate_configs["sigma_eta"], ensemble_df["sigma_eta"].to_numpy(), config=member_configs)
+    fill(f.climate_configs["sigma_xi"], ensemble_df["sigma_xi"].to_numpy(), config=member_configs)
+    fill(f.climate_configs["stochastic_run"], False, config=member_configs)
 
 
 def run_scenario(
@@ -392,8 +441,11 @@ def run_scenario(
     # member's own native parameters, unmodified by the user's sliders --
     # they represent the real fair-calibrate structural/parametric
     # uncertainty, not "what if" exploration of the central estimate.
-    for member_config, (_, row) in zip(member_configs, _ENSEMBLE_DF.iterrows()):
-        _apply_config_row(f, row, member_config)
+    # Batched across all members at once (see _apply_ensemble_configs) --
+    # looping _apply_config_row per row was the dominant cost of an
+    # ensemble run (thousands of single-value xarray .loc[] assignments).
+    if include_ensemble:
+        _apply_ensemble_configs(f, _ENSEMBLE_DF, member_configs)
 
     fill(f.species_configs["forcing_scale"], ghg_forcing_scale, specie=["CO2"] + OTHER_GHG_SPECIES, config="run")
     for aero_specie in ("Aerosol-radiation interactions", "Aerosol-cloud interactions"):
@@ -446,12 +498,12 @@ def run_scenario(
     # correctly skipped. baseline_concentration is itself a per-config
     # calibrated value (e.g. pre-industrial CO2 varies member to member), so
     # this must be set per config, not just once from "run" and broadcast.
-    for config_name in configs:
-        baseline_conc = f.species_configs["baseline_concentration"].sel(config=config_name)
-        for specie in _SPECIES:
-            val = float(baseline_conc.sel(specie=specie).values)
-            if not np.isnan(val):
-                initialise(f.concentration, val, specie=specie, config=config_name)
+    # Vectorized across every config and specie in one assignment -- NaN
+    # entries (species with no concentration state) pass straight through,
+    # since f.concentration is already all-NaN at this point (f.allocate()'s
+    # default fill), so writing NaN is a no-op identical to skipping it.
+    baseline_conc = f.species_configs["baseline_concentration"].sel(config=configs)
+    f.concentration.loc[dict(timebounds=f.timebounds[0], scenario=scenario, config=configs)] = baseline_conc.values
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
